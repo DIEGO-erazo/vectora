@@ -5,17 +5,18 @@
   Object.assign(App.els, { stage: $('stage'), viewport: $('viewport'), content: $('content'), overlay: $('overlay'), artboard: $('artboard') });
   document.documentElement.classList.add('booting'); /* sin interacción hasta recuperar el autoguardado */
   Tools.build(); Menus.build(); Panels.init(); Rulers.init();
-  Dock.init(); TransformPanel.init(); PropsPanel.init(); HistoryPanel.init(); ArtboardsPanel.init(); TaskBar.init(); Align.initUI(); initRulerOrigin(); LayersPanel.init();
+  Dock.init(); TransformPanel.init(); PropsPanel.init(); HistoryPanel.init(); ArtboardsPanel.init(); TaskBar.init(); Align.initUI(); initRulerOrigin(); LayersPanel.init(); Prefs.load();
 
   const session = await IO.restore();
   Tools.use('select');
   if (session && session.docs.length) Docs.restore(session); /* recuperar todas las pestañas */
-  else Docs.empty();                                         /* pantalla de inicio */
+  else if (Prefs.get('home')) Docs.empty();                  /* pantalla de inicio */
+  else IO.newDoc(800, 600, false);
   Panels.refresh(); Panels.renderLayers();
   document.documentElement.classList.remove('booting');
   Shell.init();
 
-  let saveT; App.on('change', () => { clearTimeout(saveT); saveT = setTimeout(() => IO.autosave(), 400); });
+  let saveT; App.on('change', () => { if (!Prefs.get('autosave')) return; clearTimeout(saveT); saveT = setTimeout(() => IO.autosave(), 400); });
   window.addEventListener('resize', () => Selection.draw());
   window.addEventListener('beforeunload', () => IO.autosave());
 
@@ -109,7 +110,7 @@
     if (k === ' ' && !tempHand && !pressed) { tempHand = App.tools.hand; stage.style.cursor = 'grab'; ev.preventDefault(); return; }
     if (k === 'Delete' || k === 'Backspace') { ev.preventDefault(); Actions.del(); return; }
     if (k.startsWith('Arrow')) {
-      ev.preventDefault(); const d = ev.shiftKey ? 10 : 1;
+      ev.preventDefault(); const d = ev.shiftKey ? Prefs.get('nudgeBig') : Prefs.get('nudge');
       const dx = k === 'ArrowLeft' ? -d : k === 'ArrowRight' ? d : 0, dy = k === 'ArrowUp' ? -d : k === 'ArrowDown' ? d : 0;
       if (!(App.tool.nudge && App.tool.nudge(dx, dy))) Actions.nudge(dx, dy);
       return;

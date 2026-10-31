@@ -234,6 +234,7 @@ const MENUS = {
     ['Cortar', 'Ctrl+X', () => Actions.cut()], ['Copiar', 'Ctrl+C', () => Actions.copy()], ['Pegar', 'Ctrl+V', () => Actions.paste()],
     ['Pegar delante', 'Ctrl+F', () => Actions.paste('front')], ['Pegar detrás', 'Ctrl+B', () => Actions.paste('back')],
     ['Borrar', 'Delete', () => Actions.del()], ['Duplicar', 'Ctrl+Alt+D', () => Actions.duplicate()], '-',
+    ['Preferencias…', 'Ctrl+K', () => Prefs.dialog()], '-',
     ['Editar colores ▸ Invertir colores', '', () => Recolor.invert()], ['Editar colores ▸ Convertir a escala de grises', '', () => Recolor.grayscale()],
     ['Editar colores ▸ Saturar…', '', () => Recolor.saturate()], ['Editar colores ▸ Ajustar equilibrio de color…', '', () => Recolor.balance()],
     ['Editar colores ▸ Fusionar de delante a detrás', '', () => Recolor.blendFrontBack()], '-',

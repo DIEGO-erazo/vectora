@@ -2,7 +2,7 @@
 'use strict';
 
 const ICONS = {
-  select: '<path d="M5 3l11 8-5 1 3 6-2 1-3-6-4 4z" fill="#cfcfcf" stroke="none"/>',
+  select: '<path d="M5 3l11 8-5 1 3 6-2 1-3-6-4 4z" style="fill:var(--icon)" stroke="none"/>',
   direct: '<path d="M5 3l11 8-5 1 3 6-2 1-3-6-4 4z"/>',
   pen: '<path d="M12 3l6 9-4 6H10l-4-6zM12 3v7"/><circle cx="12" cy="11" r="1.4"/>',
   pencil: '<path d="M4 20l1-5L16 4l4 4L9 19zM14 6l4 4"/>',

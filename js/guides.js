@@ -29,7 +29,7 @@ const SmartGuides = {
   snapBox(b) {
     this.lines = [];
     if (!this.on) return { dx: 0, dy: 0 };
-    const tol = 5 / App.view.zoom;
+    const tol = Prefs.get('snapTol') / App.view.zoom;
     const sx = this.near(this.xs, [b.x, b.x + b.width / 2, b.x + b.width], tol), sy = this.near(this.ys, [b.y, b.y + b.height / 2, b.y + b.height], tol);
     if (sx) this.lines.push({ axis: 'x', v: sx.t }); if (sy) this.lines.push({ axis: 'y', v: sy.t });
     return { dx: sx ? sx.d : 0, dy: sy ? sy.d : 0 };
@@ -37,9 +37,9 @@ const SmartGuides = {
   snapPoint(p) {
     this.lines = []; this.hit = null;
     if (!this.on) return p;
-    const tol = 5 / App.view.zoom;
+    const tol = Prefs.get('snapTol') / App.view.zoom;
     /* primero, puntos de ancla cercanos */
-    let best = null; for (const q of this.pts) { const d = Math.hypot(q.x - p.x, q.y - p.y); if (d <= tol && (!best || d < best.d)) best = { d, q }; }
+    let best = null; if (Prefs.get('snapAnchors')) for (const q of this.pts) { const d = Math.hypot(q.x - p.x, q.y - p.y); if (d <= tol && (!best || d < best.d)) best = { d, q }; }
     if (best) { this.hit = best.q; return { x: best.q.x, y: best.q.y }; }
     const sx = this.near(this.xs, [p.x], tol), sy = this.near(this.ys, [p.y], tol);
     if (sx) this.lines.push({ axis: 'x', v: sx.t }); if (sy) this.lines.push({ axis: 'y', v: sy.t });
@@ -125,8 +125,9 @@ const Rulers = {
       const W = horiz ? wrap.width : 20, H = horiz ? 20 : wrap.height;
       cv.width = W * dpr; cv.height = H * dpr; cv.style.width = W + 'px'; cv.style.height = H + 'px';
       const ctx = cv.getContext('2d'); ctx.scale(dpr, dpr);
-      ctx.fillStyle = '#2b2b2b'; ctx.fillRect(0, 0, W, H);
-      ctx.strokeStyle = '#7a7a7a'; ctx.fillStyle = '#b5b5b5'; ctx.font = '9px Segoe UI, sans-serif'; ctx.lineWidth = 1;
+      const css = getComputedStyle(document.documentElement), v = k => css.getPropertyValue(k).trim();
+      ctx.fillStyle = v('--bg-alt'); ctx.fillRect(0, 0, W, H);
+      ctx.strokeStyle = v('--dim'); ctx.fillStyle = v('--text'); ctx.font = '9px Segoe UI, sans-serif'; ctx.lineWidth = 1;
       const o = Units.origin(), len = horiz ? W : H, off = horiz ? App.view.x + o.x * App.view.zoom : App.view.y + o.y * App.view.zoom;
       const start = Math.floor((-off / z) / minor) * minor, end = (len - off) / z;
       ctx.beginPath();
@@ -141,7 +142,7 @@ const Rulers = {
         }
       }
       ctx.stroke();
-      ctx.strokeStyle = '#111'; ctx.beginPath();
+      ctx.strokeStyle = v('--edge'); ctx.beginPath();
       if (horiz) { ctx.moveTo(0, 19.5); ctx.lineTo(W, 19.5); } else { ctx.moveTo(19.5, 0); ctx.lineTo(19.5, H); } ctx.stroke();
     }
   },
