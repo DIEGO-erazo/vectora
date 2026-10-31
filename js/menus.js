@@ -233,6 +233,9 @@ const MENUS = {
     ['Cortar', 'Ctrl+X', () => Actions.cut()], ['Copiar', 'Ctrl+C', () => Actions.copy()], ['Pegar', 'Ctrl+V', () => Actions.paste()],
     ['Pegar delante', 'Ctrl+F', () => Actions.paste('front')], ['Pegar detrás', 'Ctrl+B', () => Actions.paste('back')],
     ['Borrar', 'Delete', () => Actions.del()], ['Duplicar', 'Ctrl+Alt+D', () => Actions.duplicate()], '-',
+    ['Editar colores ▸ Invertir colores', '', () => Recolor.invert()], ['Editar colores ▸ Convertir a escala de grises', '', () => Recolor.grayscale()],
+    ['Editar colores ▸ Saturar…', '', () => Recolor.saturate()], ['Editar colores ▸ Ajustar equilibrio de color…', '', () => Recolor.balance()],
+    ['Editar colores ▸ Fusionar de delante a detrás', '', () => Recolor.blendFrontBack()], '-',
     ['Ajustar a cuadrícula', 'Ctrl+Shift+\'', () => { App.snap = !App.snap; Menus.refreshChecks(); }, () => App.snap],
   ],
   'Objeto': [
@@ -272,6 +275,9 @@ const MENUS = {
     ['Mismo grosor de trazo', '', () => Actions.selectSame('stroke-width')],
   ],
   'Efecto': [
+    ['Distorsionar y transformar ▸ Fruncir y engordar…', '', () => Distort.pucker()], ['Distorsionar y transformar ▸ Retorcer…', '', () => Distort.twist()],
+    ['Distorsionar y transformar ▸ Zigzag…', '', () => Distort.zigzag()], ['Distorsionar y transformar ▸ Rugosidad…', '', () => Distort.roughen()],
+    ['Estilizar ▸ Redondear esquinas…', '', () => Distort.roundCorners()], '-',
     ['Sombra paralela…', '', () => Effects.shadow()], ['Desenfoque gaussiano…', '', () => Effects.blur()],
     ['Quitar efectos', '', () => Effects.clear()],
   ],
