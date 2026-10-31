@@ -12,7 +12,7 @@ const IO = {
     IO.count++; IO.current = null;
     App.els.content.innerHTML = ''; App.activeLayer = null; App.selection = [];
     for (const k of Object.keys(App.doc)) delete App.doc[k];
-    Object.assign(App.doc, { width: w, height: h, title, units, bleed, guides: [], swatches: [], gstyles: [], paraStyles: [], charStyles: [], brushes: [] });
+    Object.assign(App.doc, { width: w, height: h, title, units, bleed, guides: [], swatches: [], gstyles: [], paraStyles: [], charStyles: [], brushes: [], gswatches: [], colorMode: 'rgb' });
     Layers.create('Capa 1'); View.updateArtboard(); View.fit(); History.reset(); Selection.changed();
     App.emit('layers'); Panels.refresh(); Rulers.draw(); Docs.render(); View.apply();
   },
@@ -99,6 +99,7 @@ const IO = {
       paraStyles: Array.isArray(meta.paraStyles) ? meta.paraStyles.filter(g => g && typeof g.name === 'string' && g.a) : [],
       charStyles: Array.isArray(meta.charStyles) ? meta.charStyles.filter(g => g && typeof g.name === 'string' && g.a) : [],
       brushes: Array.isArray(meta.brushes) ? meta.brushes.filter(b => b && b.id && b.fx && FX[b.fx.t]) : [],
+      gswatches: Array.isArray(meta.gswatches) ? meta.gswatches.filter(g => g && g.id && /^#[0-9a-f]{6}$/i.test(g.c)) : [], colorMode: meta.colorMode === 'cmyk' ? 'cmyk' : 'rgb',
       gstyles: Array.isArray(meta.gstyles) ? meta.gstyles.filter(g => g && typeof g.name === 'string' && g.a && typeof g.a === 'object').map(g => ({ ...g, id: uid('gs') })) : [],
       guides: Array.isArray(meta.guides) ? meta.guides.filter(g => g && (g.axis === 'x' || g.axis === 'y') && isFinite(g.v)) : [],
       units: Units.list[meta.units] ? meta.units : 'px', bleed: isFinite(meta.bleed) ? Math.max(0, +meta.bleed) : 0,
@@ -126,7 +127,7 @@ const IO = {
     if (only) only.forEach(e => e.removeAttribute('data-exp'));
     if (forExport) this.purgeDefs(svg);
     /* muestras propias y guías viajan dentro del SVG */
-    const meta = {}; if ((d.swatches || []).length) meta.swatches = d.swatches; if ((d.guides || []).length) meta.guides = d.guides; if ((d.gstyles || []).length) meta.gstyles = d.gstyles; if ((d.brushes || []).length) meta.brushes = d.brushes; for (const k of ['paraStyles', 'charStyles']) if ((d[k] || []).length) meta[k] = d[k];
+    const meta = {}; if ((d.swatches || []).length) meta.swatches = d.swatches; if ((d.guides || []).length) meta.guides = d.guides; if ((d.gstyles || []).length) meta.gstyles = d.gstyles; if ((d.gswatches || []).length) meta.gswatches = d.gswatches; if (d.colorMode === 'cmyk') meta.colorMode = 'cmyk'; if ((d.brushes || []).length) meta.brushes = d.brushes; for (const k of ['paraStyles', 'charStyles']) if ((d[k] || []).length) meta[k] = d[k];
     if (d.units && d.units !== 'px') meta.units = d.units; if (d.bleed) meta.bleed = d.bleed;
     if (Artboards.count() > 1 || Artboards.list()[0].name !== 'Mesa de trabajo 1') meta.artboards = Artboards.list().map(a => ({ name: a.name, x: a.x, y: a.y, width: a.width, height: a.height }));
     if (!only && Object.keys(meta).length) svg.prepend(Object.assign(svgEl('metadata', { id: 'vectora-meta' }), { textContent: JSON.stringify(meta) }));
@@ -230,7 +231,8 @@ const MENUS = {
     ['Exportar ▸ Exportar para pantallas…', 'Ctrl+Alt+E', () => Export.screens()],
     ['Exportar ▸ PDF…', 'Ctrl+Alt+Shift+S', () => Export.dialog('pdf')], '-',
     ['Ajustar documento…', 'Ctrl+Alt+P', () => NewDoc.setup()], ['Mesa de trabajo', 'Shift+O', () => Tools.use('artboard')], '-',
-    ['Imprimir…', 'Ctrl+P', () => { const { box } = Export.area('doc'); IO.printPDF(IO.serialize(true), box.width, box.height); }],
+    ['Modo de color del documento ▸ Color RGB', '', () => DocColor.set('rgb'), () => App.doc.colorMode !== 'cmyk'], ['Modo de color del documento ▸ Color CMYK', '', () => DocColor.set('cmyk'), () => App.doc.colorMode === 'cmyk'],
+    ['Imprimir…', 'Ctrl+P', () => Print.dialog()],
     ...(window.vectoraDesktop ? ['-', ['Salir', 'Ctrl+Q', () => window.close()]] : []),
   ],
   'Edición': [
@@ -240,7 +242,7 @@ const MENUS = {
     ['Borrar', 'Delete', () => Actions.del()], ['Duplicar', 'Ctrl+Alt+D', () => Actions.duplicate()], '-',
     ['Buscar y reemplazar…', '', () => FindReplace.dialog()], '-',
     ['Preferencias…', 'Ctrl+K', () => Prefs.dialog()], '-',
-    ['Editar colores ▸ Invertir colores', '', () => Recolor.invert()], ['Editar colores ▸ Convertir a escala de grises', '', () => Recolor.grayscale()],
+    ['Editar colores ▸ Volver a colorear ilustración…', '', () => RecolorArt.open()], ['Editar colores ▸ Invertir colores', '', () => Recolor.invert()], ['Editar colores ▸ Convertir a escala de grises', '', () => Recolor.grayscale()],
     ['Editar colores ▸ Saturar…', '', () => Recolor.saturate()], ['Editar colores ▸ Ajustar equilibrio de color…', '', () => Recolor.balance()],
     ['Editar colores ▸ Fusionar de delante a detrás', '', () => Recolor.blendFrontBack()], '-',
     ['Ajustar a cuadrícula', 'Ctrl+Shift+\'', () => { App.snap = !App.snap; Menus.refreshChecks(); }, () => App.snap],

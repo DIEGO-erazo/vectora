@@ -425,3 +425,22 @@ input[type=range]{height:12px;accent-color:var(--accent)}
 .br span{font-size:10px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .br:hover{background:var(--row-hover)}
 .br.on{border-color:var(--accent);background:var(--row-on)}
+/* colores globales y Volver a colorear */
+.sw.gsw{position:relative}
+.sw.gsw::after{content:'';position:absolute;right:0;bottom:0;border:4px solid transparent;border-right-color:#fff;border-bottom-color:#fff}
+.sw.gsw.spot::before{content:'';position:absolute;right:1px;bottom:1px;width:3px;height:3px;background:#000;border-radius:50%;z-index:1}
+.sw.gsw.on{outline:2px solid var(--accent)}
+.rc-dlg{width:620px;max-width:calc(100vw - 32px)}
+.dlg-body.rc-body{flex-direction:row;gap:16px;align-items:flex-start}
+.rc-left{display:flex;flex-direction:column;gap:6px;flex:0 0 220px;width:220px}
+.rc-left canvas{width:220px;height:220px;flex:none;border-radius:50%;cursor:crosshair;touch-action:none}
+.rc-sl{display:grid;grid-template-columns:80px 1fr;align-items:center;gap:6px}
+.rc-btns{display:flex;gap:4px}
+.rc-btns button{flex:1}
+.rc-right{flex:1;min-width:180px;max-height:330px;overflow:auto}
+.rc-head{display:grid;grid-template-columns:40px 24px 1fr;font-size:11px;color:var(--dim);margin-bottom:4px}
+.rc-row{display:grid;grid-template-columns:40px 24px 1fr;align-items:center;margin-bottom:4px}
+.rc-chip{width:36px;height:22px;border:1px solid var(--edge);border-radius:2px}
+.rc-arrow{text-align:center;color:var(--dim)}
+.rc-row input{width:100%;height:24px}
+#pcKRow[hidden]{display:none}

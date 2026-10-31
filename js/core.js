@@ -69,7 +69,7 @@ const View = {
     App.els.viewport.setAttribute('transform', `matrix(${v.zoom},0,0,${v.zoom},${v.x},${v.y})`);
     $('artboardShadow').setAttribute('x', 3 / v.zoom); $('artboardShadow').setAttribute('y', 3 / v.zoom);
     $('sbZoom').textContent = Math.round(v.zoom * 100) + '%';
-    $('docTitle').textContent = `${App.dirty ? '● ' : ''}${App.doc.title} @ ${Math.round(v.zoom * 100)}% (RGB/Vista previa)`;
+    $('docTitle').textContent = `${App.dirty ? '● ' : ''}${App.doc.title} @ ${Math.round(v.zoom * 100)}% (${App.doc.colorMode === 'cmyk' ? 'CMYK' : 'RGB'}/Vista previa)`;
     document.title = `${App.dirty ? '● ' : ''}${App.doc.title} — Vectora`;
     if (window.vectoraDesktop) window.vectoraDesktop.setDirty(typeof Docs !== 'undefined' ? Docs.anyDirty() : !!App.dirty);
     if (typeof Docs !== 'undefined') Docs.render();
