@@ -6,10 +6,11 @@
   document.documentElement.classList.add('booting'); /* sin interacción hasta recuperar el autoguardado */
   Tools.build(); Menus.build(); Panels.init(); Rulers.init();
 
-  if (await IO.restore()) { App.activeLayer = null; Layers.ensure(); }
-  else { Layers.create('Capa 1'); demoArtwork(); }
-  View.updateArtboard(); View.fit(); History.reset();
-  Tools.use('select'); Panels.refresh(); Panels.renderLayers();
+  const session = await IO.restore();
+  Tools.use('select');
+  if (session && session.docs.length) Docs.restore(session); /* recuperar todas las pestañas */
+  else Docs.empty();                                         /* pantalla de inicio */
+  Panels.refresh(); Panels.renderLayers();
   document.documentElement.classList.remove('booting');
   Shell.init();
 
@@ -91,6 +92,7 @@
   for (const [id, [, k]] of Object.entries(TOOL_INFO)) if (k && App.tools[id]) TOOL_KEYS[(k.startsWith('Mayús+') ? 's+' + k.slice(6) : k).toLowerCase()] = id;
   document.addEventListener('keydown', ev => {
     if (Dialog.isOpen) return;
+    if (Home.visible && !(ev.ctrlKey || ev.metaKey)) return; /* en la pantalla de inicio solo valen los atajos de menú */
     const tag = document.activeElement && document.activeElement.tagName;
     const typing = ['INPUT', 'TEXTAREA', 'SELECT'].includes(tag);
     if (typing) { if (ev.key === 'Escape') document.activeElement.blur(); return; }

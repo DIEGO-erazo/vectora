@@ -5,8 +5,18 @@ const path = require('path');
 const fs = require('fs');
 
 const OPENABLE = /\.(svg|pdf|ai|png|jpe?g|webp|gif|bmp|avif)$/i;
-const allowed = new Set();          // rutas que el usuario eligió o abrió: solo esas se pueden leer/escribir
 let win = null, dirty = false;
+
+/* rutas que el usuario eligió o abrió: solo esas se pueden leer/escribir.
+   Se recuerdan entre sesiones para poder reabrir los archivos recientes. */
+const allowedFile = () => path.join(app.getPath('userData'), 'archivos-permitidos.json');
+const allowed = new Set();
+try { JSON.parse(fs.readFileSync(allowedFile(), 'utf8')).forEach(p => allowed.add(p)); } catch (e) { /* primera ejecución */ }
+const allow = p => {
+  allowed.delete(p); allowed.add(p);
+  const list = [...allowed].slice(-200);
+  fs.promises.writeFile(allowedFile(), JSON.stringify(list)).catch(() => {});
+};
 
 function fileFromArgs(argv) {
   return argv.slice(1).find(a => !a.startsWith('-') && OPENABLE.test(a) && fs.existsSync(a)) || null;
@@ -21,7 +31,7 @@ else app.on('second-instance', (e, argv) => {
   const f = fileFromArgs(argv); if (f) openInWindow(f);
 });
 
-function openInWindow(file) { allowed.add(file); win.webContents.send('open-file', file); }
+function openInWindow(file) { allow(file); win.webContents.send('open-file', file); }
 
 function createWindow() {
   win = new BrowserWindow({
@@ -61,12 +71,12 @@ function createWindow() {
 ipcMain.handle('dlg:save', async (e, o) => {
   const r = await dialog.showSaveDialog(win, { defaultPath: o.defaultPath, filters: o.filters });
   if (r.canceled || !r.filePath) return null;
-  allowed.add(r.filePath); return r.filePath;
+  allow(r.filePath); return r.filePath;
 });
 ipcMain.handle('dlg:open', async (e, o) => {
   const r = await dialog.showOpenDialog(win, { properties: ['openFile', ...(o.multiple ? ['multiSelections'] : [])], filters: o.filters });
   if (r.canceled) return [];
-  r.filePaths.forEach(p => allowed.add(p)); return r.filePaths;
+  r.filePaths.forEach(allow); return r.filePaths;
 });
 ipcMain.handle('fs:write', async (e, p, data) => {
   if (!allowed.has(p)) throw new Error('Ruta no autorizada');
@@ -76,7 +86,7 @@ ipcMain.handle('fs:read', async (e, p) => {
   if (!allowed.has(p)) throw new Error('Ruta no autorizada');
   return new Uint8Array(await fs.promises.readFile(p));
 });
-ipcMain.handle('launch-file', () => { const f = pendingFile; pendingFile = null; if (f) allowed.add(f); return f; });
+ipcMain.handle('launch-file', () => { const f = pendingFile; pendingFile = null; if (f) allow(f); return f; });
 ipcMain.on('dirty', (e, v) => { dirty = !!v; });
 ipcMain.on('close-now', () => { dirty = false; if (win) win.close(); });
 

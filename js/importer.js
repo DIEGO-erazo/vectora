@@ -27,6 +27,7 @@ const Import = {
         History.reset(); Selection.set([el]);
       } else return Dialog.alert(`«${file.name}» no es un formato compatible.\nAbre SVG, PDF, AI (compatible con PDF) o imágenes.`);
       IO.current = k === 'svg' && (handle || path) ? { handle, path, name: file.name } : null;
+      Recent.add(handle || path ? { handle, path, name: file.name } : null);
       App.dirty = false; View.apply();
     } catch (e) { Dialog.alert('No se pudo abrir el archivo: ' + e.message); }
   },
@@ -86,6 +87,6 @@ Object.assign(IO, {
     if (!t.download) { this.current = t; App.doc.title = t.name.replace(/\.svg$/i, ''); }
     this.saved(); return true;
   },
-  saved() { App.dirty = false; View.apply(); $('sbHint').textContent = '✔ Guardado'; setTimeout(() => { if ($('sbHint').textContent === '✔ Guardado') $('sbHint').textContent = ''; }, 2500); },
+  saved() { App.dirty = false; View.apply(); Docs.render(); if (this.current) Recent.add(this.current); $('sbHint').textContent = '✔ Guardado'; setTimeout(() => { if ($('sbHint').textContent === '✔ Guardado') $('sbHint').textContent = ''; }, 2500); },
 });
 App.on('change', () => { App.dirty = true; View.apply(); });

@@ -71,7 +71,8 @@ const View = {
     $('sbZoom').textContent = Math.round(v.zoom * 100) + '%';
     $('docTitle').textContent = `${App.dirty ? '● ' : ''}${App.doc.title} @ ${Math.round(v.zoom * 100)}% (RGB/Vista previa)`;
     document.title = `${App.dirty ? '● ' : ''}${App.doc.title} — Vectora`;
-    if (window.vectoraDesktop) window.vectoraDesktop.setDirty(!!App.dirty);
+    if (window.vectoraDesktop) window.vectoraDesktop.setDirty(typeof Docs !== 'undefined' ? Docs.anyDirty() : !!App.dirty);
+    if (typeof Docs !== 'undefined') Docs.render();
     App.emit('view');
   },
   screenToDoc(cx, cy) {

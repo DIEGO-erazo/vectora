@@ -15,7 +15,7 @@ const Shell = {
     if (d) {
       document.documentElement.classList.add('desktop');
       d.onOpenFile(async p => Import.openFile(await Files.fromPath(p)));
-      d.onSaveAndClose(async () => { if (await IO.save()) d.closeNow(); });
+      d.onSaveAndClose(async () => { if (await Docs.saveAll()) d.closeNow(); });
       d.launchFile().then(async p => { if (p) Import.openFile(await Files.fromPath(p)); });
       return;
     }

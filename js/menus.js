@@ -8,12 +8,15 @@ const IO = {
       const v = await NewDoc.open('new'); if (!v) return;
       ({ width: w, height: h, units, bleed } = v); title = v.name;
     }
+    Docs.create(); /* cada documento nuevo abre su propia pestaña */
     IO.count++; IO.current = null;
     App.els.content.innerHTML = ''; App.activeLayer = null; App.selection = [];
+    for (const k of Object.keys(App.doc)) delete App.doc[k];
     Object.assign(App.doc, { width: w, height: h, title, units, bleed, guides: [], swatches: [] });
     Layers.create('Capa 1'); View.updateArtboard(); View.fit(); History.reset(); Selection.changed();
+    App.emit('layers'); Panels.refresh(); Rulers.draw(); Docs.render(); View.apply();
   },
-  count: 1,
+  count: 0,
   sanitize(root) {
     root.querySelectorAll('script,foreignObject,iframe').forEach(e => e.remove());
     for (const e of [root, ...root.querySelectorAll('*')]) for (const a of [...e.attributes]) {
@@ -73,7 +76,9 @@ const IO = {
     if (vb.length === 4) { w = vb[2]; h = vb[3]; }
     w = w || 800; h = h || 600;
     let meta = {}; try { const m = svg.querySelector('metadata#vectora-meta'); if (m) meta = JSON.parse(m.textContent); } catch (e) { meta = {}; }
+    Docs.create();
     const c = App.els.content; c.innerHTML = ''; App.activeLayer = null; App.selection = [];
+    for (const k of Object.keys(App.doc)) delete App.doc[k];
     const defs = svgEl('defs', {}, c);
     const kids = [...svg.children].map(n => document.importNode(n, true));
     const own = kids.some(k => k.classList && k.classList.contains('layer'));
@@ -94,6 +99,7 @@ const IO = {
       guides: Array.isArray(meta.guides) ? meta.guides.filter(g => g && (g.axis === 'x' || g.axis === 'y') && isFinite(g.v)) : [],
       units: Units.list[meta.units] ? meta.units : 'px', bleed: isFinite(meta.bleed) ? Math.max(0, +meta.bleed) : 0 });
     Layers.ensure(); View.updateArtboard(); View.fit(); History.reset(); Selection.changed(); App.emit('layers');
+    Panels.refresh(); Rulers.draw(); Swatches.render(); Docs.render(); View.apply();
   },
   /* box: área exportada (por defecto la mesa de trabajo); only: exportar solo esos objetos */
   serialize(forExport = true, box = null, only = null) {
@@ -157,27 +163,33 @@ const IO = {
     if (addObject(g)) { Selection.set([g]); History.commit(); }
   },
   /* autoguardado en IndexedDB (cientos de MB, frente a los ~5 MB de localStorage) */
+  /* autoguardado de la sesión completa (todas las pestañas) */
   async autosave() {
     try {
-      const html = ImageStore.pack(App.els.content.innerHTML);
-      const images = ImageStore.used(html).map(id => [id, ImageStore.byId.get(id)]);
-      await KV.set('autosave', { doc: App.doc, html, images });
+      const s = Docs.session(), ids = new Set(s.docs.flatMap(d => ImageStore.used(d.html)));
+      await KV.set('session', { ...s, count: IO.count, images: [...ids].map(id => [id, ImageStore.byId.get(id)]) });
       if ($('sbHint').dataset.warn) { $('sbHint').textContent = ''; delete $('sbHint').dataset.warn; }
     } catch (e) {
       $('sbHint').textContent = '⚠ No se pudo autoguardar: guarda tu trabajo como SVG'; $('sbHint').dataset.warn = '1';
     }
   },
+  /* devuelve la sesión guardada ({active, docs}) o null */
   async restore() {
     try {
-      let s = await KV.get('autosave');
-      if (!s) { try { s = JSON.parse(localStorage.getItem('vectora-autosave') || 'null'); localStorage.removeItem('vectora-autosave'); } catch (e) { s = null; } }
-      if (!s || !s.html) return false;
+      let s = await KV.get('session');
+      if (!s) { /* formato anterior: un solo documento */
+        const old = await KV.get('autosave');
+        if (old && old.html) s = { active: 0, docs: [{ html: old.html, doc: old.doc }], images: old.images };
+      }
+      if (!s || !Array.isArray(s.docs)) return null;
       for (const [id, url] of s.images || []) {
+        if (!url) continue;
         ImageStore.byId.set(id, url); ImageStore.byUrl.set(url, id);
         ImageStore.n = Math.max(ImageStore.n, +id.slice(4) + 1);
       }
-      App.els.content.innerHTML = ImageStore.unpack(s.html); Object.assign(App.doc, s.doc); return true;
-    } catch (e) { return false; }
+      IO.count = s.count || s.docs.length;
+      return s;
+    } catch (e) { return null; }
   },
 };
 
@@ -204,6 +216,7 @@ const KV = {
 const MENUS = {
   'Archivo': [
     ['Nuevo…', 'Ctrl+N', () => IO.newDoc()], ['Abrir…', 'Ctrl+O', () => Import.open()], '-',
+    ['Cerrar', 'Ctrl+W', () => Docs.close()], ['Cerrar todo', 'Ctrl+Alt+W', () => Docs.closeAll()],
     ['Guardar', 'Ctrl+S', () => IO.save()], ['Guardar como…', 'Ctrl+Shift+S', () => IO.saveAs()], '-',
     ['Colocar…', 'Ctrl+Shift+P', () => Import.place()], '-',
     ['Exportar ▸ Exportar como…', 'Ctrl+Shift+E', () => Export.dialog()],
@@ -259,6 +272,8 @@ const MENUS = {
     ['Borrar guías', '', () => Guides.clear()],
   ],
   'Ventana': [
+    ['Documento siguiente', 'Ctrl+Tab', () => Docs.next(1)], ['Documento anterior', 'Ctrl+Shift+Tab', () => Docs.next(-1)],
+    ['Pantalla de inicio', '', () => { Docs.capture(); Home.show(); }], '-',
     ['Color', '', () => Menus.togglePanel('pColor')], ['Muestras', '', () => Menus.togglePanel('pSwatches')], ['Trazo', '', () => Menus.togglePanel('pStroke')],
     ['Degradado', '', () => Menus.togglePanel('pGradient')], ['Transparencia', '', () => Menus.togglePanel('pTransp')], ['Carácter', '', () => Menus.togglePanel('pChar')],
     ['Alinear', '', () => Menus.togglePanel('pAlign')], ['Buscatrazos', '', () => Menus.togglePanel('pPathfinder')], ['Capas', '', () => Menus.togglePanel('pLayers')],
