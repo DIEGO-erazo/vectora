@@ -400,3 +400,21 @@ input[type=range]{height:12px;accent-color:var(--accent)}
 .gs svg{width:100%;height:100%;display:block}
 .gs:hover{outline:1px solid var(--accent)}
 .gs.on{outline:2px solid var(--accent)}
+/* Párrafo, OpenType, glifos y estilos de texto */
+.para-align{display:flex;gap:2px;margin-bottom:8px}
+.para-align button,.ot-row button,.ts-modes button{background:var(--bg1);border:1px solid var(--edge);border-radius:2px;color:var(--text);cursor:pointer;height:24px;min-width:26px;padding:0 4px}
+.para-align button svg{width:16px;height:16px;fill:none;stroke:var(--icon);stroke-width:2}
+.para-align button.on,.ot-row button.on,.ts-modes button.on{background:var(--row-on);border-color:var(--accent)}
+.ot-row{display:flex;flex-wrap:wrap;gap:2px}
+.ot-row button{font-size:11px;min-width:24px;height:22px}
+.gl-top{display:flex;gap:4px;margin-bottom:6px}
+.gl-top select{flex:1;min-width:0}
+.gl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(28px,1fr));gap:2px;max-height:260px;overflow:auto}
+.gl-recent{max-height:none;margin-bottom:6px;min-height:0}
+.gl{height:28px;background:#fff;color:#000;border:1px solid var(--edge);border-radius:2px;font-size:16px;cursor:pointer;padding:0;font-family:inherit}
+.gl:hover{outline:1px solid var(--accent)}
+.ts-modes{display:flex;gap:2px;margin-bottom:6px}
+.ts-row{display:flex;align-items:baseline;justify-content:space-between;padding:4px 6px;border-bottom:1px solid var(--row-line);cursor:pointer;font-size:13px}
+.ts-row:hover{background:var(--row-hover)}
+.ts-row.on{background:var(--row-on)}
+.ts-row small{color:var(--dim);font-size:10.5px}

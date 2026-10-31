@@ -70,7 +70,8 @@ function refreshTransformFields(root) {
 const DOCK_GROUPS = [
   { id: 'gColor', panels: ['pColor', 'pSwatches', 'pSymbols', 'pGradient'] },
   { id: 'gMain', panels: ['pProps', 'pLayers', 'pArtboards', 'pHistory'], grow: true },
-  { id: 'gStroke', panels: ['pStroke', 'pTransp', 'pAppearance', 'pGStyles', 'pChar'], collapsed: true },
+  { id: 'gStroke', panels: ['pStroke', 'pTransp', 'pAppearance', 'pGStyles'], collapsed: true },
+  { id: 'gText', panels: ['pChar', 'pPara', 'pTextStyles', 'pGlyphs'], collapsed: true },
   { id: 'gXf', panels: ['pTransform', 'pAlign', 'pPathfinder'], collapsed: true },
 ];
 const Dock = {
@@ -80,6 +81,7 @@ const Dock = {
     const dock = $('dock');
     for (const g of DOCK_GROUPS) {
       const st = this.state[g.id] || (this.state[g.id] = { tab: g.panels[0], collapsed: !!g.collapsed });
+      if (!g.panels.includes(st.tab)) st.tab = g.panels[0];
       const box = document.createElement('div'); box.className = 'pgroup' + (g.grow ? ' grow' : ''); box.id = g.id;
       const tabs = document.createElement('div'); tabs.className = 'pg-tabs';
       const body = document.createElement('div'); body.className = 'pg-body';

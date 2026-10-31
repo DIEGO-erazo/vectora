@@ -12,7 +12,7 @@ const IO = {
     IO.count++; IO.current = null;
     App.els.content.innerHTML = ''; App.activeLayer = null; App.selection = [];
     for (const k of Object.keys(App.doc)) delete App.doc[k];
-    Object.assign(App.doc, { width: w, height: h, title, units, bleed, guides: [], swatches: [], gstyles: [] });
+    Object.assign(App.doc, { width: w, height: h, title, units, bleed, guides: [], swatches: [], gstyles: [], paraStyles: [], charStyles: [] });
     Layers.create('Capa 1'); View.updateArtboard(); View.fit(); History.reset(); Selection.changed();
     App.emit('layers'); Panels.refresh(); Rulers.draw(); Docs.render(); View.apply();
   },
@@ -96,6 +96,8 @@ const IO = {
     for (const e of c.querySelectorAll('.layer > *')) if (!e.id) e.id = uid();
     Object.assign(App.doc, { width: w, height: h, title: (name || 'Importado').replace(/\.svg$/i, ''),
       swatches: Array.isArray(meta.swatches) ? meta.swatches.filter(s => /^#[0-9a-f]{6}$/i.test(s)) : [],
+      paraStyles: Array.isArray(meta.paraStyles) ? meta.paraStyles.filter(g => g && typeof g.name === 'string' && g.a) : [],
+      charStyles: Array.isArray(meta.charStyles) ? meta.charStyles.filter(g => g && typeof g.name === 'string' && g.a) : [],
       gstyles: Array.isArray(meta.gstyles) ? meta.gstyles.filter(g => g && typeof g.name === 'string' && g.a && typeof g.a === 'object').map(g => ({ ...g, id: uid('gs') })) : [],
       guides: Array.isArray(meta.guides) ? meta.guides.filter(g => g && (g.axis === 'x' || g.axis === 'y') && isFinite(g.v)) : [],
       units: Units.list[meta.units] ? meta.units : 'px', bleed: isFinite(meta.bleed) ? Math.max(0, +meta.bleed) : 0,
@@ -123,7 +125,7 @@ const IO = {
     if (only) only.forEach(e => e.removeAttribute('data-exp'));
     if (forExport) this.purgeDefs(svg);
     /* muestras propias y guías viajan dentro del SVG */
-    const meta = {}; if ((d.swatches || []).length) meta.swatches = d.swatches; if ((d.guides || []).length) meta.guides = d.guides; if ((d.gstyles || []).length) meta.gstyles = d.gstyles;
+    const meta = {}; if ((d.swatches || []).length) meta.swatches = d.swatches; if ((d.guides || []).length) meta.guides = d.guides; if ((d.gstyles || []).length) meta.gstyles = d.gstyles; for (const k of ['paraStyles', 'charStyles']) if ((d[k] || []).length) meta[k] = d[k];
     if (d.units && d.units !== 'px') meta.units = d.units; if (d.bleed) meta.bleed = d.bleed;
     if (Artboards.count() > 1 || Artboards.list()[0].name !== 'Mesa de trabajo 1') meta.artboards = Artboards.list().map(a => ({ name: a.name, x: a.x, y: a.y, width: a.width, height: a.height }));
     if (!only && Object.keys(meta).length) svg.prepend(Object.assign(svgEl('metadata', { id: 'vectora-meta' }), { textContent: JSON.stringify(meta) }));
@@ -235,6 +237,7 @@ const MENUS = {
     ['Cortar', 'Ctrl+X', () => Actions.cut()], ['Copiar', 'Ctrl+C', () => Actions.copy()], ['Pegar', 'Ctrl+V', () => Actions.paste()],
     ['Pegar delante', 'Ctrl+F', () => Actions.paste('front')], ['Pegar detrás', 'Ctrl+B', () => Actions.paste('back')],
     ['Borrar', 'Delete', () => Actions.del()], ['Duplicar', 'Ctrl+Alt+D', () => Actions.duplicate()], '-',
+    ['Buscar y reemplazar…', '', () => FindReplace.dialog()], '-',
     ['Preferencias…', 'Ctrl+K', () => Prefs.dialog()], '-',
     ['Editar colores ▸ Invertir colores', '', () => Recolor.invert()], ['Editar colores ▸ Convertir a escala de grises', '', () => Recolor.grayscale()],
     ['Editar colores ▸ Saturar…', '', () => Recolor.saturate()], ['Editar colores ▸ Ajustar equilibrio de color…', '', () => Recolor.balance()],
@@ -278,7 +281,11 @@ const MENUS = {
     ['Convertir en texto de área', '', () => TextActions.toArea()], '-',
     ['Cambiar mayúsculas ▸ MAYÚSCULAS', '', () => TextActions.changeCase('upper')], ['Cambiar mayúsculas ▸ minúsculas', '', () => TextActions.changeCase('lower')],
     ['Cambiar mayúsculas ▸ Tipo Título', '', () => TextActions.changeCase('title')], ['Cambiar mayúsculas ▸ Tipo oración', '', () => TextActions.changeCase('sentence')], '-',
-    ['Rellenar con texto de muestra', '', () => TextActions.placeholder()], ['Carácter', 'Ctrl+T', () => Menus.togglePanel('pChar')],
+    ['Texto enlazado ▸ Crear', '', () => TextThreadCmd.create()], ['Texto enlazado ▸ Liberar selección', '', () => TextThreadCmd.release()], ['Texto enlazado ▸ Quitar enlace', '', () => TextThreadCmd.remove()], '-',
+    ['Buscar y reemplazar…', '', () => FindReplace.dialog()], ['Revisar ortografía automáticamente', '', () => FindReplace.toggleSpell(), () => FindReplace.spell], '-',
+    ['Rellenar con texto de muestra', '', () => TextActions.placeholder()], '-',
+    ['Carácter', 'Ctrl+T', () => Menus.togglePanel('pChar')], ['Párrafo', 'Ctrl+Alt+T', () => Menus.togglePanel('pPara')],
+    ['Estilos de texto', '', () => Menus.togglePanel('pTextStyles')], ['Glifos', 'Alt+Shift+F11', () => Menus.togglePanel('pGlyphs')], ['Fuentes del sistema…', '', () => Fonts.load()],
   ],
   'Seleccionar': [
     ['Todo', 'Ctrl+A', () => Actions.selectAll()], ['Deseleccionar', 'Ctrl+Shift+A', () => Selection.clear()],
@@ -319,7 +326,7 @@ const MENUS = {
     ['Barra de tareas contextual', '', () => TaskBar.toggle(), () => TaskBar.on], '-',
     ['Propiedades', '', () => Menus.togglePanel('pProps')], ['Transformar', 'Shift+F8', () => Menus.togglePanel('pTransform')],
     ['Historial', '', () => Menus.togglePanel('pHistory')], ['Símbolos', 'Ctrl+Shift+F11', () => Menus.togglePanel('pSymbols')], ['Color', 'F6', () => Menus.togglePanel('pColor')], ['Muestras', '', () => Menus.togglePanel('pSwatches')], ['Trazo', '', () => Menus.togglePanel('pStroke')],
-    ['Degradado', '', () => Menus.togglePanel('pGradient')], ['Transparencia', '', () => Menus.togglePanel('pTransp')], ['Apariencia', 'Shift+F6', () => Menus.togglePanel('pAppearance')], ['Estilos gráficos', 'Shift+F5', () => Menus.togglePanel('pGStyles')], ['Carácter', '', () => Menus.togglePanel('pChar')],
+    ['Degradado', '', () => Menus.togglePanel('pGradient')], ['Transparencia', '', () => Menus.togglePanel('pTransp')], ['Apariencia', 'Shift+F6', () => Menus.togglePanel('pAppearance')], ['Estilos gráficos', 'Shift+F5', () => Menus.togglePanel('pGStyles')], ['Carácter', '', () => Menus.togglePanel('pChar')], ['Párrafo', '', () => Menus.togglePanel('pPara')], ['Glifos', '', () => Menus.togglePanel('pGlyphs')],
     ['Alinear', '', () => Menus.togglePanel('pAlign')], ['Buscatrazos', '', () => Menus.togglePanel('pPathfinder')], ['Capas', '', () => Menus.togglePanel('pLayers')],
   ],
   'Ayuda': [
