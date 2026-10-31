@@ -123,7 +123,11 @@ function addObject(el) {
   const layer = Layers.ensure();
   if (Layers.isLocked(layer)) { Dialog.alert('La capa activa está bloqueada.'); return null; }
   if (!el.id) el.id = uid();
-  layer.appendChild(el); App.emit('layers');
+  const iso = typeof Isolation !== 'undefined' && Isolation.active();
+  if (iso) { /* modo aislamiento: lo nuevo va dentro del grupo, en coordenadas del documento */
+    iso.appendChild(el); const P = Geo.toDoc(iso); if (!P.isIdentity) Geo.setMatrix(el, P.inverse());
+  } else layer.appendChild(el);
+  App.emit('layers');
   return el;
 }
 
@@ -181,6 +185,8 @@ App.tools.select = {
   dblclick(p, ev) {
     const o = hitObject(ev);
     if (o && o.tagName === 'text') { Tools.use('text'); TextTool.edit(o); }
+    else if (o && o.tagName === 'g') Isolation.enter(o);       /* doble clic en grupo: aislarlo */
+    else if (!o && Isolation.active()) Isolation.exit();       /* doble clic fuera: salir */
   },
 };
 

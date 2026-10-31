@@ -17,6 +17,7 @@ const Docs = {
   /* carga una entrada como documento activo */
   apply(d) {
     if (TextTool.editing) TextTool.commit();
+    if (Isolation.active()) Isolation.exit(true);
     App.els.content.innerHTML = ImageStore.unpack(d.html || '');
     for (const k of Object.keys(App.doc)) delete App.doc[k];
     Object.assign(App.doc, JSON.parse(JSON.stringify(d.doc || { width: 800, height: 600, title: 'Sin título' })));

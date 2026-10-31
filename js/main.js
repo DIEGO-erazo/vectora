@@ -113,7 +113,7 @@
       if (!(App.tool.nudge && App.tool.nudge(dx, dy))) Actions.nudge(dx, dy);
       return;
     }
-    if (k === 'Escape') { if (App.toolName === 'select') Selection.clear(); else Tools.use('select'); return; }
+    if (k === 'Escape') { if (App.toolName !== 'select') Tools.use('select'); else if (!App.selection.length && Isolation.active()) Isolation.exit(); else Selection.clear(); return; }
     if (ev.shiftKey && k.toLowerCase() === 'x') return Actions.swapFS();
     if (k === 'x') { App.activeFS = App.activeFS === 'fill' ? 'stroke' : 'fill'; Panels.refresh(); return; }
     if (k === 'd') return Actions.defaultFS();

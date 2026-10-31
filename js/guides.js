@@ -2,18 +2,23 @@
 'use strict';
 
 const SmartGuides = {
-  on: true, xs: [], ys: [], lines: [],
+  on: true, xs: [], ys: [], pts: [], lines: [], hit: null,
   /* recopila bordes y centros de los demás objetos, la mesa de trabajo y las guías */
   prepare(exclude = []) {
-    const ex = new Set(exclude), xs = [], ys = [];
+    const ex = new Set(exclude), xs = [], ys = [], pts = [];
     const push = b => { xs.push(b.x, b.x + b.width / 2, b.x + b.width); ys.push(b.y, b.y + b.height / 2, b.y + b.height); };
     for (const a of Artboards.all()) push(a);
     for (const o of Layers.objects()) {
       if (ex.has(o) || Layers.isHidden(o)) continue;
       const b = Geo.bbox(o); if (b) push(b);
+      /* puntos de ancla (para ajustar a punto), con un límite para documentos grandes */
+      if (pts.length < 4000) for (const s of leafShapes(o)) {
+        if (s.tagName === 'text' || s.tagName === 'image') continue;
+        const m = Geo.toDoc(s); for (const sub of PathData.parse(PathData.fromShape(s) || '')) for (const n of sub.nodes) pts.push(Geo.pt(m, n.x, n.y));
+      }
     }
     for (const g of App.doc.guides || []) (g.axis === 'x' ? xs : ys).push(g.v);
-    this.xs = xs; this.ys = ys; this.lines = [];
+    this.xs = xs; this.ys = ys; this.pts = pts; this.lines = []; this.hit = null;
   },
   near(list, vals, tol) {
     let best = null;
@@ -30,15 +35,24 @@ const SmartGuides = {
     return { dx: sx ? sx.d : 0, dy: sy ? sy.d : 0 };
   },
   snapPoint(p) {
-    this.lines = [];
+    this.lines = []; this.hit = null;
     if (!this.on) return p;
-    const tol = 5 / App.view.zoom, sx = this.near(this.xs, [p.x], tol), sy = this.near(this.ys, [p.y], tol);
+    const tol = 5 / App.view.zoom;
+    /* primero, puntos de ancla cercanos */
+    let best = null; for (const q of this.pts) { const d = Math.hypot(q.x - p.x, q.y - p.y); if (d <= tol && (!best || d < best.d)) best = { d, q }; }
+    if (best) { this.hit = best.q; return { x: best.q.x, y: best.q.y }; }
+    const sx = this.near(this.xs, [p.x], tol), sy = this.near(this.ys, [p.y], tol);
     if (sx) this.lines.push({ axis: 'x', v: sx.t }); if (sy) this.lines.push({ axis: 'y', v: sy.t });
     return { x: sx ? sx.t : p.x, y: sy ? sy.t : p.y };
   },
-  clear() { this.lines = []; },
+  clear() { this.lines = []; this.hit = null; },
   draw(g) {
     const r = App.els.stage.getBoundingClientRect();
+    if (this.hit) {
+      const s = View.docToStage(this.hit.x, this.hit.y);
+      svgEl('rect', { x: s.x - 4, y: s.y - 4, width: 8, height: 8, fill: 'none', stroke: '#ff3fbf', 'stroke-width': 1.5 }, g);
+      Object.assign(svgEl('text', { x: s.x + 8, y: s.y - 6, fill: '#ff3fbf', 'font-size': 11, 'font-family': 'Segoe UI, sans-serif' }, g), { textContent: 'ancla' });
+    }
     for (const l of this.lines) {
       const s = View.docToStage(l.v, l.v);
       if (l.axis === 'x') svgEl('line', { x1: s.x + .5, x2: s.x + .5, y1: 0, y2: r.height, stroke: '#ff3fbf', 'stroke-width': 1 }, g);
