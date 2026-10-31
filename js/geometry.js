@@ -181,7 +181,7 @@ const PathData = {
     const d = this.fromShape(el); if (d == null) return el;
     const p = svgEl('path', { d });
     const skip = new Set(['x', 'y', 'width', 'height', 'rx', 'ry', 'cx', 'cy', 'r', 'x1', 'y1', 'x2', 'y2', 'points', 'd']);
-    for (const a of [...el.attributes]) if (!skip.has(a.name)) p.setAttribute(a.name, a.value);
+    for (const a of [...el.attributes]) if (!skip.has(a.name) && !/^data-(shape|cx|cy|r|n|inner)$/.test(a.name)) p.setAttribute(a.name, a.value);
     if (el.tagName === 'line' || el.tagName === 'polyline') p.setAttribute('fill', p.getAttribute('fill') || 'none');
     el.replaceWith(p);
     return p;

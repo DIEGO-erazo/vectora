@@ -140,7 +140,11 @@ const PropsPanel = {
   visible() { return !$('pProps').hidden && !$('gMain').classList.contains('collapsed'); },
   btn(label, fn, title = '') { return { label, fn, title }; },
   render() {
-    if (!this.visible() || this.body.contains(document.activeElement) && document.activeElement.tagName !== 'BUTTON') return;
+    if (!this.visible()) return;
+    /* no redibujar mientras se escribe en un campo, salvo que haya cambiado la selección */
+    const key = App.selection.map(e => e.id).join(',');
+    if (this.body.contains(document.activeElement) && document.activeElement.tagName !== 'BUTTON' && key === this.lastKey) return;
+    this.lastKey = key;
     const s = App.selection, b = this.body, one = s.length === 1 ? s[0] : null;
     const kind = !s.length ? 'Documento' : one ? objName(one).replace(/[<>]/g, '') : `${s.length} objetos`;
     const sec = (title, html) => `<div class="pp-sec"><div class="pp-title">${title}</div>${html}</div>`;
@@ -158,6 +162,7 @@ const PropsPanel = {
       actions.push(this.btn('Seleccionar todo', () => Actions.selectAll()), this.btn('Colocar…', () => Import.place()), this.btn('Exportar…', () => Export.dialog()));
     } else {
       html += sec('Transformar', `<div class="pp-xf">${transformFieldsHTML('pp')}</div>`);
+      if (one && LiveShape.kind(one)) html += sec('Forma', `<div class="pp-shape">${LiveShape.propsHTML(one)}</div>`);
       const st = one || s[0], f = getStyle(st, 'fill'), k = getStyle(st, 'stroke');
       html += sec('Apariencia', `<div class="pp-row pp-ap">
           <label>Relleno <button class="swatch-btn" id="ppFill"></button></label>
@@ -197,6 +202,7 @@ const PropsPanel = {
       q('ppSmart').onclick = () => { SmartGuides.on = !SmartGuides.on; this.render(); }; q('ppSnap').onclick = () => { App.snap = !App.snap; this.render(); };
     } else {
       const xf = b.querySelector('.pp-xf'); bindTransformFields(xf); refreshTransformFields(xf);
+      if (b.querySelector('.pp-shape')) LiveShape.bindProps(b.querySelector('.pp-shape'), one);
       paintBox(q('ppFill'), App.fill); paintBox(q('ppStroke'), App.stroke);
       q('ppFill').onclick = () => { App.activeFS = 'fill'; Panels.refresh(); Dock.show('pColor'); $('pcPicker').click(); };
       q('ppStroke').onclick = () => { App.activeFS = 'stroke'; Panels.refresh(); Dock.show('pColor'); $('pcPicker').click(); };

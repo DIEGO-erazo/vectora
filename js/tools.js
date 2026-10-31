@@ -270,9 +270,13 @@ function radialTool(star) {
       const o = App.shapeOpts, pts = polyPoints(this.p0.x, this.p0.y, r, r, star ? o.points : o.sides, star, o.inner);
       if (!this.el) { this.el = addObject(svgEl('polygon', { ...newShapeAttrs(), points: pts })); if (!this.el) { this.p0 = null; return; } }
       else this.el.setAttribute('points', pts);
+      /* forma en vivo: los parámetros quedan guardados para poder cambiarlos después */
+      setA(this.el, { 'data-cx': this.p0.x, 'data-cy': this.p0.y, 'data-r': r, 'data-n': star ? o.points : o.sides, ...(star ? { 'data-inner': o.inner } : {}) });
+      this.el.setAttribute('data-shape', star ? 'star' : 'polygon');
+      App.measure = `${star ? 'Puntas' : 'Lados'}: ${star ? o.points : o.sides}  Radio: ${Units.fmt(r)} ${Units.u}`;
       Selection.set([this.el]);
     },
-    up() { if (this.el) History.commit(); this.p0 = null; this.el = null; },
+    up() { App.measure = null; if (this.el) History.commit(); this.p0 = null; this.el = null; },
     options: () => star
       ? `Puntas <input type="number" id="optPts" min="3" max="60" value="${App.shapeOpts.points}"> Radio interior <input type="number" id="optInner" min="5" max="95" value="${App.shapeOpts.inner * 100}">%`
       : `Lados <input type="number" id="optSides" min="3" max="60" value="${App.shapeOpts.sides}">`,
