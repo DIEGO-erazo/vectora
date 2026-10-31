@@ -12,7 +12,7 @@ const IO = {
     IO.count++; IO.current = null;
     App.els.content.innerHTML = ''; App.activeLayer = null; App.selection = [];
     for (const k of Object.keys(App.doc)) delete App.doc[k];
-    Object.assign(App.doc, { width: w, height: h, title, units, bleed, guides: [], swatches: [], gstyles: [], paraStyles: [], charStyles: [] });
+    Object.assign(App.doc, { width: w, height: h, title, units, bleed, guides: [], swatches: [], gstyles: [], paraStyles: [], charStyles: [], brushes: [] });
     Layers.create('Capa 1'); View.updateArtboard(); View.fit(); History.reset(); Selection.changed();
     App.emit('layers'); Panels.refresh(); Rulers.draw(); Docs.render(); View.apply();
   },
@@ -98,6 +98,7 @@ const IO = {
       swatches: Array.isArray(meta.swatches) ? meta.swatches.filter(s => /^#[0-9a-f]{6}$/i.test(s)) : [],
       paraStyles: Array.isArray(meta.paraStyles) ? meta.paraStyles.filter(g => g && typeof g.name === 'string' && g.a) : [],
       charStyles: Array.isArray(meta.charStyles) ? meta.charStyles.filter(g => g && typeof g.name === 'string' && g.a) : [],
+      brushes: Array.isArray(meta.brushes) ? meta.brushes.filter(b => b && b.id && b.fx && FX[b.fx.t]) : [],
       gstyles: Array.isArray(meta.gstyles) ? meta.gstyles.filter(g => g && typeof g.name === 'string' && g.a && typeof g.a === 'object').map(g => ({ ...g, id: uid('gs') })) : [],
       guides: Array.isArray(meta.guides) ? meta.guides.filter(g => g && (g.axis === 'x' || g.axis === 'y') && isFinite(g.v)) : [],
       units: Units.list[meta.units] ? meta.units : 'px', bleed: isFinite(meta.bleed) ? Math.max(0, +meta.bleed) : 0,
@@ -125,7 +126,7 @@ const IO = {
     if (only) only.forEach(e => e.removeAttribute('data-exp'));
     if (forExport) this.purgeDefs(svg);
     /* muestras propias y guías viajan dentro del SVG */
-    const meta = {}; if ((d.swatches || []).length) meta.swatches = d.swatches; if ((d.guides || []).length) meta.guides = d.guides; if ((d.gstyles || []).length) meta.gstyles = d.gstyles; for (const k of ['paraStyles', 'charStyles']) if ((d[k] || []).length) meta[k] = d[k];
+    const meta = {}; if ((d.swatches || []).length) meta.swatches = d.swatches; if ((d.guides || []).length) meta.guides = d.guides; if ((d.gstyles || []).length) meta.gstyles = d.gstyles; if ((d.brushes || []).length) meta.brushes = d.brushes; for (const k of ['paraStyles', 'charStyles']) if ((d[k] || []).length) meta[k] = d[k];
     if (d.units && d.units !== 'px') meta.units = d.units; if (d.bleed) meta.bleed = d.bleed;
     if (Artboards.count() > 1 || Artboards.list()[0].name !== 'Mesa de trabajo 1') meta.artboards = Artboards.list().map(a => ({ name: a.name, x: a.x, y: a.y, width: a.width, height: a.height }));
     if (!only && Object.keys(meta).length) svg.prepend(Object.assign(svgEl('metadata', { id: 'vectora-meta' }), { textContent: JSON.stringify(meta) }));
@@ -274,6 +275,7 @@ const MENUS = {
     ['Trazado ▸ Contornear trazo', '', () => PathOps.outlineStroke()], ['Trazado ▸ Desplazar trazado…', '', () => PathOps.offsetPath()],
     ['Trazado compuesto ▸ Crear', 'Ctrl+8', () => Pathfinder.compound()], ['Trazado compuesto ▸ Liberar', 'Ctrl+Alt+Shift+8', () => Pathfinder.release()],
     ['Máscara de recorte ▸ Crear', 'Ctrl+7', () => Actions.makeClip()], ['Máscara de recorte ▸ Liberar', 'Ctrl+Alt+7', () => Actions.releaseClip()],
+    '-', ['Distorsión de envolvente ▸ Deformar…', 'Ctrl+Alt+Shift+W', () => Envelope.warp()], ['Expandir apariencia', '', () => LiveFX.expand()],
   ],
   'Texto': [
     ['Crear contornos', 'Ctrl+Shift+O', () => TextOutline.run()], '-',
@@ -306,6 +308,8 @@ const MENUS = {
     ['Distorsionar y transformar ▸ Fruncir y engordar…', '', () => LiveFX.add('pucker')], ['Distorsionar y transformar ▸ Retorcer…', '', () => LiveFX.add('twist')],
     ['Distorsionar y transformar ▸ Zigzag…', '', () => LiveFX.add('zigzag')], ['Distorsionar y transformar ▸ Rugosidad…', '', () => LiveFX.add('roughen')],
     ['Estilizar ▸ Redondear esquinas…', '', () => LiveFX.add('round')], '-',
+    ['Deformar ▸ Arco…', '', () => Envelope.warp('arc')], ['Deformar ▸ Arco inferior…', '', () => Envelope.warp('arcLower')], ['Deformar ▸ Arco superior…', '', () => Envelope.warp('arcUpper')], ['Deformar ▸ Arcada…', '', () => Envelope.warp('arch')], ['Deformar ▸ Abombado…', '', () => Envelope.warp('bulge')], ['Deformar ▸ Bandera…', '', () => Envelope.warp('flag')], ['Deformar ▸ Onda…', '', () => Envelope.warp('wave')], ['Deformar ▸ Pez…', '', () => Envelope.warp('fish')], ['Deformar ▸ Ascendente…', '', () => Envelope.warp('rise')], ['Deformar ▸ Ojo de pez…', '', () => Envelope.warp('fisheye')], ['Deformar ▸ Inflar…', '', () => Envelope.warp('inflate')], ['Deformar ▸ Comprimir…', '', () => Envelope.warp('squeeze')], ['Deformar ▸ Giro…', '', () => Envelope.warp('twist')],
+    ['Estilizar ▸ Caligrafía…', '', () => LiveFX.add('calli')], ['Estilizar ▸ Perfil de anchura…', '', () => LiveFX.add('width')], '-',
     ['Sombra paralela…', '', () => Effects.shadow()], ['Desenfoque gaussiano…', '', () => Effects.blur()],
     ['Quitar efectos', '', () => Effects.clear()], ['Expandir apariencia', '', () => LiveFX.expand()],
   ],
@@ -326,7 +330,7 @@ const MENUS = {
     ['Barra de tareas contextual', '', () => TaskBar.toggle(), () => TaskBar.on], '-',
     ['Propiedades', '', () => Menus.togglePanel('pProps')], ['Transformar', 'Shift+F8', () => Menus.togglePanel('pTransform')],
     ['Historial', '', () => Menus.togglePanel('pHistory')], ['Símbolos', 'Ctrl+Shift+F11', () => Menus.togglePanel('pSymbols')], ['Color', 'F6', () => Menus.togglePanel('pColor')], ['Muestras', '', () => Menus.togglePanel('pSwatches')], ['Trazo', '', () => Menus.togglePanel('pStroke')],
-    ['Degradado', '', () => Menus.togglePanel('pGradient')], ['Transparencia', '', () => Menus.togglePanel('pTransp')], ['Apariencia', 'Shift+F6', () => Menus.togglePanel('pAppearance')], ['Estilos gráficos', 'Shift+F5', () => Menus.togglePanel('pGStyles')], ['Carácter', '', () => Menus.togglePanel('pChar')], ['Párrafo', '', () => Menus.togglePanel('pPara')], ['Glifos', '', () => Menus.togglePanel('pGlyphs')],
+    ['Degradado', '', () => Menus.togglePanel('pGradient')], ['Transparencia', '', () => Menus.togglePanel('pTransp')], ['Apariencia', 'Shift+F6', () => Menus.togglePanel('pAppearance')], ['Estilos gráficos', 'Shift+F5', () => Menus.togglePanel('pGStyles')], ['Pinceles', 'F5', () => Menus.togglePanel('pBrushes')], ['Carácter', '', () => Menus.togglePanel('pChar')], ['Párrafo', '', () => Menus.togglePanel('pPara')], ['Glifos', '', () => Menus.togglePanel('pGlyphs')],
     ['Alinear', '', () => Menus.togglePanel('pAlign')], ['Buscatrazos', '', () => Menus.togglePanel('pPathfinder')], ['Capas', '', () => Menus.togglePanel('pLayers')],
   ],
   'Ayuda': [

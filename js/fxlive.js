@@ -34,12 +34,30 @@ const LiveFX = {
   render(el) {
     const src = el.getAttribute('data-src'); if (src == null) return;
     let subs = PathData.parse(src);
-    for (const f of this.list(el)) if (f.on !== false && FX[f.t]) subs = FX[f.t].run(subs, f.p || {});
+    const L = this.list(el).filter(f => f.on !== false && FX[f.t]);
+    this.paint(el, L.some(f => FX[f.t].outline));
+    const ctx = { w: this.baseWidth(el) };
+    for (const f of L) subs = FX[f.t].run(subs, f.p || {}, ctx);
     el.setAttribute('d', PathData.serialize(subs));
+  },
+  /* pinceles y anchura variable convierten el trazo en un contorno relleno:
+     el trazo original (color, grosor y relleno) se guarda en data-ostroke */
+  ostroke(el) { try { return JSON.parse(el.getAttribute('data-ostroke') || 'null'); } catch (e) { return null; } },
+  baseWidth(el) { const o = this.ostroke(el); return o ? +o.w || 1 : +(getStyle(el, 'stroke-width') || 1); },
+  paint(el, outline) {
+    const o = this.ostroke(el);
+    if (outline && !o) {
+      const st = getStyle(el, 'stroke') || 'none', c = st === 'none' ? '#000000' : st;
+      el.setAttribute('data-ostroke', JSON.stringify({ s: c, w: +(getStyle(el, 'stroke-width') || 1), f: getStyle(el, 'fill') || 'none' }));
+      for (const k of ['stroke', 'stroke-width', 'fill']) el.style.removeProperty(k);
+      el.setAttribute('fill', c); el.setAttribute('stroke', 'none'); el.removeAttribute('stroke-width');
+    } else if (!outline && o) {
+      el.setAttribute('stroke', o.s); el.setAttribute('stroke-width', o.w); el.setAttribute('fill', o.f); el.removeAttribute('data-ostroke');
+    }
   },
   write(el, list) {
     if (list.length) el.setAttribute('data-fx', JSON.stringify(list));
-    else { el.removeAttribute('data-fx'); if (el.hasAttribute('data-src')) { el.setAttribute('d', el.getAttribute('data-src')); el.removeAttribute('data-src'); } return; }
+    else { el.removeAttribute('data-fx'); this.paint(el, false); if (el.hasAttribute('data-src')) { el.setAttribute('d', el.getAttribute('data-src')); el.removeAttribute('data-src'); } return; }
     this.render(el);
   },
   prepare(el) { el = PathData.convert(el); if (!el.hasAttribute('data-src')) el.setAttribute('data-src', el.getAttribute('d') || ''); return el; },
@@ -67,7 +85,7 @@ const LiveFX = {
   remove(el, i) { const L = this.list(el); L.splice(i, 1); this.write(el, L); History.named('Quitar efecto', () => History.commit()); Selection.changed(); },
   /* expandir apariencia: lo que se ve pasa a ser la geometría real */
   expand(els = App.selection.flatMap(e => [e, ...e.querySelectorAll('[data-fx]')])) {
-    let n = 0; for (const el of els) if (el.hasAttribute && el.hasAttribute('data-fx')) { el.removeAttribute('data-fx'); el.removeAttribute('data-src'); n++; }
+    let n = 0; for (const el of els) if (el.hasAttribute && el.hasAttribute('data-fx')) { el.removeAttribute('data-fx'); el.removeAttribute('data-src'); el.removeAttribute('data-ostroke'); n++; }
     if (n) { History.named('Expandir apariencia', () => History.commit()); Selection.changed(); }
   },
 };
@@ -81,7 +99,12 @@ const LiveFX = {
     if (m.b !== 0 || m.c !== 0) return;
     const T = p => p && ({ x: m.a * p.x + m.e, y: m.d * p.y + m.f }), subs = PathData.parse(el.getAttribute('data-src'));
     subs.forEach(s => s.nodes.forEach(n => { const q = T(n); n.x = q.x; n.y = q.y; n.hin = T(n.hin); n.hout = T(n.hout); }));
-    el.setAttribute('data-src', PathData.serialize(subs)); el.removeAttribute('transform'); LiveFX.render(el);
+    el.setAttribute('data-src', PathData.serialize(subs)); el.removeAttribute('transform');
+    /* cajas de referencia de los efectos (envolventes) */
+    const L = LiveFX.list(el); let boxed = false;
+    for (const f of L) if (f.p && f.p.box) { const [x, y, w, h] = f.p.box, A = T({ x, y }), B = T({ x: x + w, y: y + h }); f.p.box = [Math.min(A.x, B.x), Math.min(A.y, B.y), Math.abs(B.x - A.x), Math.abs(B.y - A.y)]; boxed = true; }
+    if (boxed) el.setAttribute('data-fx', JSON.stringify(L));
+    LiveFX.render(el);
   };
   /* la selección directa edita el trazado original */
   const basePI = pathItem, baseRI = renderItem;
@@ -101,7 +124,7 @@ const Appearance = {
   },
   menu(btn) {
     const r = btn.getBoundingClientRect(), pop = $('menuPopup'); Menus.close(); Menus.openMenu = '__ap'; pop.innerHTML = '';
-    const items = [...Object.entries(FX).map(([k, f]) => [f.name + '…', () => LiveFX.add(k)]), '-', ['Sombra paralela…', () => Effects.shadow()], ['Desenfoque gaussiano…', () => Effects.blur()]];
+    const items = [...Object.entries(FX).filter(([, f]) => !f.hidden).map(([k, f]) => [f.name + '…', () => (k === 'warp' ? Envelope.warp() : LiveFX.add(k))]), '-', ['Sombra paralela…', () => Effects.shadow()], ['Desenfoque gaussiano…', () => Effects.blur()]];
     for (const it of items) {
       if (it === '-') { pop.insertAdjacentHTML('beforeend', '<div class="menu-sep"></div>'); continue; }
       const row = document.createElement('div'); row.className = 'menu-item'; row.innerHTML = `<span>${it[0]}</span><span></span>`;

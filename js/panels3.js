@@ -70,7 +70,7 @@ function refreshTransformFields(root) {
 const DOCK_GROUPS = [
   { id: 'gColor', panels: ['pColor', 'pSwatches', 'pSymbols', 'pGradient'] },
   { id: 'gMain', panels: ['pProps', 'pLayers', 'pArtboards', 'pHistory'], grow: true },
-  { id: 'gStroke', panels: ['pStroke', 'pTransp', 'pAppearance', 'pGStyles'], collapsed: true },
+  { id: 'gStroke', panels: ['pStroke', 'pBrushes', 'pTransp', 'pAppearance', 'pGStyles'], collapsed: true },
   { id: 'gText', panels: ['pChar', 'pPara', 'pTextStyles', 'pGlyphs'], collapsed: true },
   { id: 'gXf', panels: ['pTransform', 'pAlign', 'pPathfinder'], collapsed: true },
 ];
