@@ -103,7 +103,7 @@ const TextTool = App.tools.text = {
     for (const id in map) $(id).onchange = e => {
       const [k, attr] = map[id]; App.textOpts[k] = id === 'optSize' ? +e.target.value : e.target.value;
       const texts = App.selection.filter(el => el.tagName === 'text');
-      if (texts.length) { texts.forEach(t => t.setAttribute(attr, App.textOpts[k])); History.commit(); Selection.draw(); }
+      if (texts.length) { texts.forEach(t => t.setAttribute(attr, App.textOpts[k])); TextLayout.relayout(texts); History.commit(); Selection.draw(); }
       if (this.editing) this.styleEditor();
     };
   },
@@ -114,22 +114,42 @@ const TextTool = App.tools.text = {
     if (o && o.tagName === 'text') return this.edit(o);
     this.edit(null, p);
   },
-  edit(el, p) {
-    const ta = $('textEditor'); this.editing = { el, p };
+  /* opts.area = {x,y,width,height} (texto de área) · opts.path = trazado (texto en trazado) */
+  edit(el, p, opts = {}) {
+    const ta = $('textEditor'); this.editing = { el, p, area: opts.area || null, path: opts.path || null };
     if (el) {
+      const tp = el.querySelector('textPath'), area = TextLayout.area(el);
       const lines = [...el.querySelectorAll('tspan')].map(t => t.textContent);
-      ta.value = lines.length ? lines.join('\n') : el.textContent;
+      ta.value = el.getAttribute('data-text') ?? (tp ? tp.textContent : lines.length ? lines.join('\n') : el.textContent);
       Object.assign(App.textOpts, { family: el.getAttribute('font-family') || 'Arial', size: +el.getAttribute('font-size') || 24,
         weight: el.getAttribute('font-weight') || 'normal', style: el.getAttribute('font-style') || 'normal', anchor: el.getAttribute('text-anchor') || 'start' });
-      this.editing.p = Geo.pt(Geo.toDoc(el), parseFloat(el.getAttribute('x')) || 0, parseFloat(el.getAttribute('y')) || 0);
+      const m = Geo.toDoc(el);
+      if (area) { this.editing.area = area; this.editing.p = Geo.pt(m, area.x, area.y); }
+      else if (tp) {
+        const src = document.getElementById((tp.getAttribute('href') || '').slice(1)), q = src ? src.getPointAtLength(0) : { x: 0, y: 0 };
+        this.editing.p = Geo.pt(m, q.x, q.y);
+      } else this.editing.p = Geo.pt(m, parseFloat(el.getAttribute('x')) || 0, parseFloat(el.getAttribute('y')) || 0);
       el.setAttribute('opacity', '0');
-    } else ta.value = '';
+    } else {
+      ta.value = '';
+      if (opts.area) this.editing.p = { x: opts.area.x, y: opts.area.y };
+      if (opts.path) { const q = opts.path.getPointAtLength(0); this.editing.p = Geo.pt(Geo.toDoc(opts.path), q.x, q.y); }
+    }
     this.styleEditor(); ta.style.display = 'block'; ta.focus(); setTimeout(() => ta.focus(), 0);
     ta.onkeydown = e => { e.stopPropagation(); if (e.key === 'Escape' || (e.key === 'Enter' && e.ctrlKey)) this.commit(); };
     ta.oninput = () => this.styleEditor();
   },
   styleEditor() {
     const ta = $('textEditor'), o = App.textOpts, z = App.view.zoom, e = this.editing; if (!e) return;
+    if (e.area) { /* el cuadro de edición es el propio área: el texto se ajusta solo */
+      const s = View.docToStage(e.p.x, e.p.y);
+      Object.assign(ta.style, { left: s.x + 'px', top: s.y + 'px', width: e.area.width * z + 'px', height: Math.max(e.area.height * z, o.size * z * 1.3) + 'px',
+        whiteSpace: 'pre-wrap', textAlign: o.anchor === 'middle' ? 'center' : o.anchor === 'end' ? 'right' : 'left',
+        fontFamily: o.family, fontSize: o.size * z + 'px', fontWeight: o.weight, fontStyle: o.style,
+        color: TextTool.fillColor() });
+      return;
+    }
+    ta.style.whiteSpace = 'pre';
     const s = View.docToStage(e.p.x, e.p.y - o.size * 0.95);
     const lines = ta.value.split('\n');
     const w = Math.max(40, Math.max(...lines.map(l => l.length)) * o.size * z * 0.62 + 20);
@@ -137,7 +157,7 @@ const TextTool = App.tools.text = {
     Object.assign(ta.style, { left: s.x - shift + 'px', top: s.y + 'px', width: w + 'px', height: lines.length * o.size * z * 1.2 + 8 + 'px',
       textAlign: o.anchor === 'middle' ? 'center' : o.anchor === 'end' ? 'right' : 'left',
       fontFamily: o.family, fontSize: o.size * z + 'px', fontWeight: o.weight, fontStyle: o.style,
-      color: App.fill === 'none' || App.fill.startsWith('url(') ? '#000' : App.fill });
+      color: TextTool.fillColor() });
   },
   commit() {
     const e = this.editing; if (!e) return; this.editing = null;
@@ -146,20 +166,30 @@ const TextTool = App.tools.text = {
     let el = e.el;
     if (!txt.trim()) { if (el) { el.remove(); History.commit(); App.emit('layers'); } return; }
     if (!el) {
-      el = addObject(svgEl('text', { x: round(e.p.x), y: round(e.p.y), fill: App.fill === 'none' ? '#000000' : App.fill,
+      el = addObject(svgEl('text', { x: round(e.p.x), y: round(e.p.y), fill: TextTool.fillColor(),
         'font-family': o.family, 'font-size': o.size, 'font-weight': o.weight, 'font-style': o.style,
         'text-anchor': o.anchor === 'start' ? null : o.anchor }));
       if (!el) return;
+      if (e.area) el.setAttribute('data-area', [e.area.x, e.area.y, e.area.width, e.area.height].map(v => round(v, 2)).join(' '));
+      if (e.path) TextLayout.attachPath(el, e.path);
     }
     el.removeAttribute('opacity');
+    if (TextLayout.area(el)) { TextLayout.layoutArea(el, txt); return this.done(el, txt); }
+    const tp = el.querySelector('textPath');
+    if (tp) { tp.textContent = txt.replace(/\n+/g, ' '); return this.done(el, txt); }
     const x = el.getAttribute('x') || 0;
     el.textContent = '';
     const lead = round((+el.getAttribute('data-leading') || 120) / 100, 3) + 'em';
     txt.split('\n').forEach((line, i) => { const t = svgEl('tspan', { x, dy: i ? lead : null }, el); t.textContent = line || ' '; });
+    this.done(el, txt);
+  },
+  done(el, txt) {
     el.setAttribute('data-name', txt.split('\n')[0].slice(0, 30));
-    Selection.set([el]); History.commit(); App.emit('layers');
+    Selection.set([el]); History.named('Texto', () => History.commit()); App.emit('layers');
   },
   deactivate() { this.commit(); },
+  /* como en Illustrator, el texto nuevo es negro si el relleno actual es blanco o ninguno */
+  fillColor() { const f = App.fill; return !f || f === 'none' || f === '#ffffff' || f.startsWith('url(') ? '#000000' : f; },
 };
 
 /* ---------- Degradado (G) ---------- */

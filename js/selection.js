@@ -176,8 +176,10 @@ function normalizeTransform(el) {
     const T = p => p && ({ x: tx(p.x), y: ty(p.y) });
     subs.forEach(s => s.nodes.forEach(n => { const q = T(n); n.x = q.x; n.y = q.y; n.hin = T(n.hin); n.hout = T(n.hout); }));
     el.setAttribute('d', PathData.serialize(subs));
-  } else if (tag === 'text' && m.a === 1 && m.d === 1) {
+  } else if (tag === 'text' && m.a === 1 && m.d === 1 && !el.querySelector('textPath')) {
     S('x', tx(A('x'))); S('y', ty(A('y')));
+    const ar = el.getAttribute('data-area');
+    if (ar) { const [ax, ay, aw, ah] = ar.split(/\s+/).map(Number); el.setAttribute('data-area', [tx(ax), ty(ay), aw, ah].map(v => round(v, 2)).join(' ')); }
     for (const ts of el.querySelectorAll('tspan')) if (ts.hasAttribute('x')) ts.setAttribute('x', round(tx(parseFloat(ts.getAttribute('x')) || 0), 3));
   } else return;
   el.removeAttribute('transform');

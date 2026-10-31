@@ -112,7 +112,9 @@ const ContextMenu = {
       ...(s.length > 1 ? [['Crear máscara de recorte', 'Ctrl+7', () => Actions.makeClip()], ['Crear trazado compuesto', 'Ctrl+8', () => Pathfinder.compound()]] : []),
       ...(clip ? [['Liberar máscara de recorte', 'Ctrl+Alt+7', () => Actions.releaseClip()]] : []),
       ...(s.length <= 2 ? [['Unir', 'Ctrl+J', () => PathOps.join()]] : []),
-      ['Contornear trazo', '', () => PathOps.outlineStroke()], '-',
+      ['Contornear trazo', '', () => PathOps.outlineStroke()],
+      ...(s.some(e => e.tagName === 'text') ? [['Crear contornos', 'Ctrl+Shift+O', () => TextOutline.run()]] : []),
+      ...(s.some(e => e.tagName === 'image') ? [['Calco de imagen…', '', () => Trace.dialog()]] : []), '-',
       ['Bloquear selección', 'Ctrl+2', () => Actions.lock()], ['Ocultar selección', 'Ctrl+3', () => Actions.hide()],
       ...(one && s[0].tagName === 'text' ? [['Editar texto', '', () => { const t = s[0]; Tools.use('text'); TextTool.edit(t); }]] : []),
     ];

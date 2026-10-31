@@ -163,7 +163,7 @@ const CharPanel = {
   init() {
     $('pcFont').innerHTML = FONTS.map(f => `<option>${f}</option>`).join('');
     const texts = () => App.selection.flatMap(e => e.tagName === 'text' ? [e] : [...e.querySelectorAll('text')]);
-    const apply = (fn, opt) => { opt(); const ts = texts(); ts.forEach(fn); if (ts.length) { History.commit(); Selection.draw(); } };
+    const apply = (fn, opt) => { opt(); const ts = texts(); ts.forEach(fn); TextLayout.relayout(ts); if (ts.length) { History.commit(); Selection.draw(); } };
     $('pcFont').onchange = e => apply(t => t.setAttribute('font-family', e.target.value), () => App.textOpts.family = e.target.value);
     $('pcSize').onchange = e => apply(t => t.setAttribute('font-size', +e.target.value), () => App.textOpts.size = +e.target.value);
     $('pcStyle').onchange = e => { const [w, s] = e.target.value.split('|');

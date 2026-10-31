@@ -44,6 +44,10 @@ function createWindow() {
   Menu.setApplicationMenu(process.platform === 'darwin' ? Menu.buildFromTemplate([{ role: 'appMenu' }, { role: 'editMenu' }, { role: 'windowMenu' }]) : null);
   win.loadFile(path.join(__dirname, '..', 'index.html'));
   win.webContents.setVisualZoomLevelLimits(1, 1);
+  /* «Crear contornos» necesita leer las fuentes instaladas (Local Font Access) */
+  const ses = win.webContents.session, PERMS = ['local-fonts', 'clipboard-sanitized-write'];
+  ses.setPermissionRequestHandler((wc, permission, cb) => cb(PERMS.includes(permission)));
+  ses.setPermissionCheckHandler((wc, permission) => PERMS.includes(permission));
   win.once('ready-to-show', () => { win.maximize(); win.show(); });
 
   /* enlaces externos en el navegador; ventanas en blanco (imprimir) permitidas */

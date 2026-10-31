@@ -68,6 +68,7 @@ const FT = {
 const LIBS = {
   jspdf: ['jspdf@2.5.1', 'dist/jspdf.umd.min.js'], svg2pdf: ['svg2pdf.js@2.2.3', 'dist/svg2pdf.umd.min.js'],
   pdfjs: ['pdfjs-dist@3.11.174', 'build/pdf.min.js'], pdfworker: ['pdfjs-dist@3.11.174', 'build/pdf.worker.min.js'],
+  trace: ['imagetracerjs@1.2.6', 'imagetracer_v1.2.6.js'], opentype: ['opentype.js@1.3.4', 'dist/opentype.min.js'],
 };
 const Lib = {
   cache: {},
