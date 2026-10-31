@@ -89,11 +89,16 @@ const Export = {
   cleanName(s) { return String(s).replace(/[\\/:*?"<>|]+/g, '-').trim() || 'vectora'; },
   /* área exportada: mesa de trabajo, con sangrado, selección o todo el arte */
   area(kind) {
-    const d = App.doc, b = d.bleed || 0;
+    const b = App.doc.bleed || 0, ab = Artboards.active();
     if (kind === 'sel' && App.selection.length) return { box: Geo.selBox(App.selection), only: App.selection };
-    if (kind === 'art') return { box: Geo.selBox(Layers.objects().filter(o => !Layers.isHidden(o))) || { x: 0, y: 0, width: d.width, height: d.height }, only: null };
-    if (kind === 'bleed') return { box: { x: -b, y: -b, width: d.width + 2 * b, height: d.height + 2 * b }, only: null };
-    return { box: { x: 0, y: 0, width: d.width, height: d.height }, only: null };
+    if (kind === 'art') return { box: Geo.selBox(Layers.objects().filter(o => !Layers.isHidden(o))) || ab, only: null };
+    if (kind === 'bleed') return { box: { x: ab.x - b, y: ab.y - b, width: ab.width + 2 * b, height: ab.height + 2 * b }, only: null };
+    return { box: ab, only: null };
+  },
+  /* áreas de todas las mesas de trabajo (con sangrado si se pide) */
+  artboardAreas(withBleed) {
+    const b = withBleed ? App.doc.bleed || 0 : 0;
+    return Artboards.all().map(a => ({ name: a.name, box: { x: a.x - b, y: a.y - b, width: a.width + 2 * b, height: a.height + 2 * b } }));
   },
   bgColor(v, mime) {
     if (v.bg === 'transparent') return mime === 'image/jpeg' ? '#ffffff' : null;
@@ -109,23 +114,31 @@ const Export = {
     return new Blob([u8], { type: mime });
   },
   /* marcas de recorte en las esquinas de la mesa de trabajo (para imprenta) */
-  addCropMarks(svg, box) {
-    const d = App.doc, b = d.bleed || 0, off = b + 6, len = 18, m = off + len + 6;
-    const nb = { x: -m, y: -m, width: d.width + 2 * m, height: d.height + 2 * m };
+  addCropMarks(svg, box, trim = Artboards.active()) {
+    const b = App.doc.bleed || 0, off = b + 6, len = 18, m = off + len + 6, t = trim;
+    const nb = { x: t.x - m, y: t.y - m, width: t.width + 2 * m, height: t.height + 2 * m };
     Object.assign(box, nb); svg.setAttribute('viewBox', `${nb.x} ${nb.y} ${nb.width} ${nb.height}`); svg.setAttribute('width', nb.width); svg.setAttribute('height', nb.height);
     const g = svgEl('g', { stroke: '#000', 'stroke-width': 0.3, fill: 'none' }, svg);
-    for (const [x, y, sx, sy] of [[0, 0, -1, -1], [d.width, 0, 1, -1], [0, d.height, -1, 1], [d.width, d.height, 1, 1]]) {
+    for (const [x, y, sx, sy] of [[t.x, t.y, -1, -1], [t.x + t.width, t.y, 1, -1], [t.x, t.y + t.height, -1, 1], [t.x + t.width, t.y + t.height, 1, 1]]) {
       svgEl('line', { x1: x + sx * off, y1: y, x2: x + sx * (off + len), y2: y }, g);
       svgEl('line', { x1: x, y1: y + sy * off, x2: x, y2: y + sy * (off + len) }, g);
     }
   },
-  async pdfBlob(svg, box) {
+  async pdfBlob(svg, box) { return this.pdfPages([{ svg, box }]); },
+  /* PDF vectorial de varias páginas: [{svg, box}] */
+  async pdfPages(pages) {
     await Lib.load(Lib.url('jspdf')); await Lib.load(Lib.url('svg2pdf'));
-    const { jsPDF } = window.jspdf, w = box.width, h = box.height;
-    const pdf = new jsPDF({ unit: 'pt', format: [w, h], orientation: w > h ? 'landscape' : 'portrait', compress: true });
-    const holder = document.createElement('div'); holder.style.cssText = 'position:fixed;left:-99999px;top:0';
-    holder.appendChild(svg); document.body.appendChild(holder);
-    try { await pdf.svg(svg, { x: 0, y: 0, width: w, height: h }); } finally { holder.remove(); }
+    const { jsPDF } = window.jspdf, o = b => (b.width > b.height ? 'landscape' : 'portrait');
+    const pdf = new jsPDF({ unit: 'pt', format: [pages[0].box.width, pages[0].box.height], orientation: o(pages[0].box), compress: true });
+    const holder = document.createElement('div'); holder.style.cssText = 'position:fixed;left:-99999px;top:0'; document.body.appendChild(holder);
+    try {
+      for (const [i, { svg, box }] of pages.entries()) {
+        if (i) pdf.addPage([box.width, box.height], o(box));
+        holder.appendChild(svg);
+        await pdf.svg(svg, { x: 0, y: 0, width: box.width, height: box.height });
+        svg.remove();
+      }
+    } finally { holder.remove(); }
     pdf.setProperties({ title: App.doc.title, creator: 'Vectora' });
     return pdf.output('blob');
   },
@@ -136,8 +149,10 @@ const Export = {
     const raster = v => ['png', 'jpg', 'webp'].includes(v.fmt);
     const v = await Dialog.form('Exportar como', [
       { id: 'fmt', label: 'Formato', type: 'select', value: fmt, options: [['png', 'PNG'], ['jpg', 'JPEG'], ['webp', 'WebP'], ['svg', 'SVG'], ['pdf', 'PDF']] },
-      { id: 'area', label: 'Área', type: 'select', value: 'doc', options: [['doc', 'Mesa de trabajo'], ...(d.bleed ? [['bleed', 'Mesa de trabajo + sangrado']] : []),
+      { id: 'area', label: 'Área', type: 'select', value: 'doc', options: [['doc', 'Mesa de trabajo actual'], ...(d.bleed ? [['bleed', 'Mesa actual + sangrado']] : []),
+        ...(Artboards.count() > 1 ? [['all', `Todas las mesas (${Artboards.count()})`]] : []),
         ...(hasSel ? [['sel', 'Solo la selección']] : []), ['art', 'Todo el arte (ajustado)']] },
+      { id: 'allBleed', label: 'Incluir sangrado', type: 'checkbox', value: false, show: v => v.area === 'all' && !!App.doc.bleed },
       { id: 'h1', type: 'heading', label: 'Opciones de imagen', show: raster },
       { id: 'res', label: 'Resolución', type: 'select', value: '150', options: [['72', 'Pantalla (72 ppp)'], ['150', 'Media (150 ppp)'], ['300', 'Alta (300 ppp)'], ['custom', 'Otra…']], show: raster },
       { id: 'ppi', label: 'ppp', type: 'number', value: 600, min: 10, max: 2400, show: v => raster(v) && v.res === 'custom' },
@@ -158,6 +173,7 @@ const Export = {
     if (v) await this.run(v);
   },
   async run(v) {
+    if (v.area === 'all') return this.runAll(v);
     const { box, only } = this.area(v.area);
     if (!box || !box.width || !box.height) return Dialog.alert('El área elegida está vacía.');
     const base = this.cleanName(App.doc.title + (v.area === 'sel' ? '-seleccion' : ''));
@@ -185,11 +201,36 @@ const Export = {
     } finally { this.busy(''); }
   },
 
+  /* todas las mesas: PDF de varias páginas o un archivo por mesa (en ZIP si hay varias) */
+  async runAll(v) {
+    const areas = this.artboardAreas(v.allBleed), base = this.cleanName(App.doc.title);
+    try {
+      if (v.fmt === 'pdf' && v.pdfMode === 'vector') {
+        const target = await Files.pickSave(base + '.pdf', [FT.pdf]); if (!target) return;
+        this.busy('Generando PDF…');
+        const pages = areas.map(a => { const box = { ...a.box }, svg = IO.buildSVG(true, a.box); if (v.marks) this.addCropMarks(svg, box, a.box); return { svg, box }; });
+        return void await Files.write(target, await this.pdfPages(pages));
+      }
+      if (v.fmt === 'pdf') return Dialog.alert('Para varias mesas usa «PDF vectorial».');
+      const target = await Files.pickSave(base + '-mesas.zip', [FT.zip]); if (!target) return;
+      const files = [], mime = { png: 'image/png', jpg: 'image/jpeg', webp: 'image/webp' }[v.fmt];
+      const ppi = v.res === 'custom' ? clamp(+v.ppi || 72, 10, 2400) : +v.res;
+      for (const [i, a] of areas.entries()) {
+        this.busy(`Exportando mesa ${i + 1} de ${areas.length}…`);
+        const blob = v.fmt === 'svg' ? new Blob([SvgOpts.apply(IO.buildSVG(true, a.box), v)]) : await this.raster(a.box, null, ppi, mime, v);
+        files.push({ name: `${String(i + 1).padStart(2, '0')}-${this.cleanName(a.name)}.${v.fmt}`, data: new Uint8Array(await blob.arrayBuffer()) });
+      }
+      await Files.write(target, Bin.zip(files));
+    } catch (e) { Dialog.alert('No se pudo exportar: ' + e.message); }
+    finally { this.busy(''); }
+  },
+
   /* ---------- Exportar para pantallas: varias escalas y formatos en un ZIP ---------- */
   async screens() {
     const hasSel = App.selection.length > 0;
     const v = await Dialog.form('Exportar para pantallas', [
-      { id: 'assets', label: 'Recursos', type: 'select', value: hasSel ? 'sel' : 'doc', options: [['doc', 'Mesa de trabajo'], ...(hasSel ? [['sel', 'Cada objeto seleccionado']] : []), ['layers', 'Cada capa']] },
+      { id: 'assets', label: 'Recursos', type: 'select', value: hasSel ? 'sel' : Artboards.count() > 1 ? 'boards' : 'doc', options: [['doc', 'Mesa de trabajo actual'],
+        ...(Artboards.count() > 1 ? [['boards', 'Cada mesa de trabajo']] : []), ...(hasSel ? [['sel', 'Cada objeto seleccionado']] : []), ['layers', 'Cada capa']] },
       { id: 'preset', label: 'Formatos', type: 'select', value: 'web', options: [['web', 'Web (1x, 2x PNG + SVG)'], ['ios', 'iOS (1x, 2x, 3x PNG)'],
         ['android', 'Android (mdpi … xxxhdpi PNG)'], ['custom', 'Personalizado…']] },
       { id: 'scales', label: 'Escalas', value: '1, 2', show: v => v.preset === 'custom' },
@@ -204,6 +245,7 @@ const Export = {
     /* recursos */
     const assets = [];
     if (v.assets === 'doc') assets.push({ name: App.doc.title, ...this.area('doc') });
+    else if (v.assets === 'boards') this.artboardAreas(false).forEach(a => assets.push({ name: a.name, box: a.box, only: null }));
     else if (v.assets === 'sel') App.selection.forEach((el, i) => assets.push({ name: el.getAttribute('data-name') || `${objName(el).replace(/[<>]/g, '')}-${i + 1}`, box: Geo.bbox(el), only: [el] }));
     else Layers.all().filter(l => l.getAttribute('display') !== 'none').forEach(l => { const only = [...l.children]; const box = Geo.selBox(only); if (box) assets.push({ name: l.getAttribute('data-name'), box, only }); });
     /* formatos: [carpeta, sufijo, escala, formato] */

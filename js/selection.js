@@ -58,6 +58,7 @@ const Selection = {
     const g = App.els.overlay; g.innerHTML = '';
     const sel = App.selection;
     if (typeof Guides !== 'undefined') Guides.draw(g);
+    if (typeof Artboards !== 'undefined') Artboards.drawLabels(g);
     const showBox = sel.length && App.toolName !== 'direct' && App.toolName !== 'pen';
     for (const el of sel) {
       const ly = Layers.layerOf(el); const c = (ly && ly.getAttribute('data-color')) || '#4f8cff';

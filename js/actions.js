@@ -133,7 +133,7 @@ const Actions = {
   /* ----- alinear ----- */
   align(kind) {
     const sel = App.selection.filter(e => !Layers.isLocked(e)); if (!sel.length) return;
-    const ref = sel.length === 1 ? { x: 0, y: 0, width: App.doc.width, height: App.doc.height } : Geo.selBox(sel);
+    const ref = sel.length === 1 ? Artboards.active() : Geo.selBox(sel);
     if (kind === 'disth' || kind === 'distv') {
       if (sel.length < 3) return;
       const h = kind === 'disth', items = sel.map(e => ({ e, b: Geo.bbox(e) })).sort((a, b) => h ? a.b.x - b.b.x : a.b.y - b.b.y);
@@ -186,8 +186,9 @@ const Actions = {
   placeImage(dataUrl) {
     const img = new Image();
     img.onload = () => {
-      let w = img.width, h = img.height; const k = Math.min(1, App.doc.width / w, App.doc.height / h); w *= k; h *= k;
-      const el = addObject(svgEl('image', { href: dataUrl, x: round((App.doc.width - w) / 2), y: round((App.doc.height - h) / 2), width: round(w), height: round(h), preserveAspectRatio: 'none' }));
+      const ab = Artboards.active();
+      let w = img.width, h = img.height; const k = Math.min(1, ab.width / w, ab.height / h); w *= k; h *= k;
+      const el = addObject(svgEl('image', { href: dataUrl, x: round(ab.x + (ab.width - w) / 2), y: round(ab.y + (ab.height - h) / 2), width: round(w), height: round(h), preserveAspectRatio: 'none' }));
       if (el) { Selection.set([el]); History.commit(); }
     };
     img.src = dataUrl;

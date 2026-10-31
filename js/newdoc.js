@@ -9,7 +9,7 @@ const NewDoc = {
       const setup = mode === 'setup', d = App.doc;
       const st = {
         cat: setup ? null : (this.lastCat || 'Imprimir'),
-        units: setup ? d.units || 'px' : 'mm', w: setup ? d.width : Units.fromU(210, 'mm'), h: setup ? d.height : Units.fromU(297, 'mm'),
+        units: setup ? d.units || 'px' : 'mm', w: setup ? Artboards.active().width : Units.fromU(210, 'mm'), h: setup ? Artboards.active().height : Units.fromU(297, 'mm'),
         bleed: setup ? d.bleed || 0 : Units.fromU(3, 'mm'), name: setup ? d.title : 'Sin título-' + (IO.count + 1), preset: setup ? null : 'A4',
       };
       const back = document.createElement('div'); back.className = 'dlg-back';
@@ -76,7 +76,8 @@ const NewDoc = {
   },
   async setup() {
     const v = await this.open('setup'); if (!v) return;
-    Object.assign(App.doc, { title: v.name, width: v.width, height: v.height, units: v.units, bleed: v.bleed });
-    View.updateArtboard(); History.commit(); Panels.refreshControlBar(); Rulers.draw(); Selection.draw();
+    Object.assign(App.doc, { title: v.name, units: v.units, bleed: v.bleed });
+    Artboards.setRect(Artboards.activeIndex(), { ...Artboards.active(), width: v.width, height: v.height });
+    View.updateArtboard(); History.named('Ajustar documento', () => History.commit()); Docs.render(); Panels.refreshControlBar(); Rulers.draw(); Selection.draw();
   },
 };

@@ -97,7 +97,8 @@ const IO = {
     Object.assign(App.doc, { width: w, height: h, title: (name || 'Importado').replace(/\.svg$/i, ''),
       swatches: Array.isArray(meta.swatches) ? meta.swatches.filter(s => /^#[0-9a-f]{6}$/i.test(s)) : [],
       guides: Array.isArray(meta.guides) ? meta.guides.filter(g => g && (g.axis === 'x' || g.axis === 'y') && isFinite(g.v)) : [],
-      units: Units.list[meta.units] ? meta.units : 'px', bleed: isFinite(meta.bleed) ? Math.max(0, +meta.bleed) : 0 });
+      units: Units.list[meta.units] ? meta.units : 'px', bleed: isFinite(meta.bleed) ? Math.max(0, +meta.bleed) : 0,
+      artboards: Array.isArray(meta.artboards) ? meta.artboards.filter(a => a && [a.x, a.y, a.width, a.height].every(isFinite)).map(a => ({ name: String(a.name || 'Mesa de trabajo'), x: +a.x, y: +a.y, width: +a.width, height: +a.height })) : undefined, activeArtboard: 0 });
     Layers.ensure(); View.updateArtboard(); View.fit(); History.reset(); Selection.changed(); App.emit('layers');
     Panels.refresh(); Rulers.draw(); Swatches.render(); Docs.render(); View.apply();
   },
@@ -122,6 +123,7 @@ const IO = {
     /* muestras propias y guías viajan dentro del SVG */
     const meta = {}; if ((d.swatches || []).length) meta.swatches = d.swatches; if ((d.guides || []).length) meta.guides = d.guides;
     if (d.units && d.units !== 'px') meta.units = d.units; if (d.bleed) meta.bleed = d.bleed;
+    if (Artboards.count() > 1 || Artboards.list()[0].name !== 'Mesa de trabajo 1') meta.artboards = Artboards.list().map(a => ({ name: a.name, x: a.x, y: a.y, width: a.width, height: a.height }));
     if (!only && Object.keys(meta).length) svg.prepend(Object.assign(svgEl('metadata', { id: 'vectora-meta' }), { textContent: JSON.stringify(meta) }));
     return svg;
   },
@@ -239,6 +241,9 @@ const MENUS = {
     ['Transformar ▸ Escalar…', '', () => Actions.scaleDialog()], ['Transformar ▸ Reflejar horizontal', '', () => Actions.reflect('h')],
     ['Transformar ▸ Reflejar vertical', '', () => Actions.reflect('v')], ['Transformar ▸ Reflejar…', '', () => Actions.reflectDialog()],
     ['Transformar ▸ Distorsionar…', '', () => Actions.shearDialog()], '-',
+    ['Mesas de trabajo ▸ Nueva', '', () => { Artboards.add(); Artboards.fitAll(); History.commit(); }], ['Mesas de trabajo ▸ Eliminar', '', () => { Artboards.remove(); History.commit(); }],
+    ['Mesas de trabajo ▸ Ajustar a límites de ilustración', '', () => { const b = Geo.selBox(Layers.objects()); if (b) { Artboards.setRect(Artboards.activeIndex(), b); History.commit(); } }],
+    ['Mesas de trabajo ▸ Ajustar a límites de selección', '', () => { const b = Selection.box(); if (b) { Artboards.setRect(Artboards.activeIndex(), b); History.commit(); } }], '-',
     ['Fusión ▸ Crear', 'Ctrl+Alt+B', () => Blend.make(App.selection)], ['Fusión ▸ Liberar', 'Ctrl+Alt+Shift+B', () => Blend.release()],
     ['Fusión ▸ Expandir', '', () => Blend.expand()], ['Fusión ▸ Opciones de fusión…', '', () => Blend.options()], '-',
     ['Organizar ▸ Traer al frente', 'Ctrl+Shift+]', () => Actions.arrange('front')], ['Organizar ▸ Hacia delante', 'Ctrl+]', () => Actions.arrange('forward')],
@@ -264,7 +269,7 @@ const MENUS = {
   ],
   'Ver': [
     ['Acercar', 'Ctrl+=', () => View.zoomAt(1.25)], ['Alejar', 'Ctrl+-', () => View.zoomAt(0.8)],
-    ['Encajar mesa de trabajo en ventana', 'Ctrl+0', () => View.fit()], ['Tamaño real', 'Ctrl+1', () => View.setZoom(1)], '-',
+    ['Encajar mesa de trabajo en ventana', 'Ctrl+0', () => View.fit()], ['Encajar todas en la ventana', 'Ctrl+Alt+0', () => Artboards.fitAll()], ['Tamaño real', 'Ctrl+1', () => View.setZoom(1)], '-',
     ['Contornear', 'Ctrl+Y', () => { App.els.content.classList.toggle('outline'); Menus.refreshChecks(); }, () => App.els.content.classList.contains('outline')],
     ['Mostrar cuadrícula', 'Ctrl+\'', () => { Grid.toggle(); Menus.refreshChecks(); }, () => Grid.on], '-',
     ['Reglas', 'Ctrl+R', () => Rulers.toggle(), () => Rulers.on],

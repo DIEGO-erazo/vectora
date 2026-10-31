@@ -7,7 +7,7 @@ const SmartGuides = {
   prepare(exclude = []) {
     const ex = new Set(exclude), xs = [], ys = [];
     const push = b => { xs.push(b.x, b.x + b.width / 2, b.x + b.width); ys.push(b.y, b.y + b.height / 2, b.y + b.height); };
-    push({ x: 0, y: 0, width: App.doc.width, height: App.doc.height });
+    for (const a of Artboards.all()) push(a);
     for (const o of Layers.objects()) {
       if (ex.has(o) || Layers.isHidden(o)) continue;
       const b = Geo.bbox(o); if (b) push(b);

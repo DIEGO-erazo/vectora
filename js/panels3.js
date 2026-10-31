@@ -68,7 +68,7 @@ function refreshTransformFields(root) {
 /* ---------- dock: grupos de paneles con pestañas ---------- */
 const DOCK_GROUPS = [
   { id: 'gColor', panels: ['pColor', 'pSwatches', 'pGradient'] },
-  { id: 'gMain', panels: ['pProps', 'pLayers', 'pHistory'], grow: true },
+  { id: 'gMain', panels: ['pProps', 'pLayers', 'pArtboards', 'pHistory'], grow: true },
   { id: 'gStroke', panels: ['pStroke', 'pTransp', 'pChar'], collapsed: true },
   { id: 'gXf', panels: ['pTransform', 'pAlign', 'pPathfinder'], collapsed: true },
 ];
@@ -147,8 +147,9 @@ const PropsPanel = {
     let html = `<div class="pp-kind">${kind}</div>`;
     const actions = [];
     if (!s.length) {
-      html += sec('Mesa de trabajo', `<div class="pp-row"><label>An <input type="number" step="any" id="ppW" value="${Units.fmt(App.doc.width)}"></label>
-        <label>Al <input type="number" step="any" id="ppH" value="${Units.fmt(App.doc.height)}"></label>
+      const ab = Artboards.active();
+      html += sec(`Mesa de trabajo: ${ab.name.replace(/</g, '&lt;')}`, `<div class="pp-row"><label>An <input type="number" step="any" id="ppW" value="${Units.fmt(ab.width)}"></label>
+        <label>Al <input type="number" step="any" id="ppH" value="${Units.fmt(ab.height)}"></label>
         <select id="ppUnit" title="Unidades">${Units.options()}</select></div>
         <div class="pp-row"><button class="text-btn" id="ppSetup">Ajustar documento…</button><button class="text-btn" id="ppAb">Editar mesa de trabajo</button></div>`);
       html += sec('Reglas y cuadrículas', `<div class="pp-row">
@@ -187,8 +188,9 @@ const PropsPanel = {
     const q = id => b.querySelector('#' + id);
     if (!s.length) {
       q('ppUnit').value = Units.u;
-      q('ppW').onchange = e => { App.doc.width = Math.max(1, Units.fromU(+e.target.value)); View.updateArtboard(); History.named('Mesa de trabajo', () => History.commit()); };
-      q('ppH').onchange = e => { App.doc.height = Math.max(1, Units.fromU(+e.target.value)); View.updateArtboard(); History.named('Mesa de trabajo', () => History.commit()); };
+      const abSize = (w, h) => { Artboards.setRect(Artboards.activeIndex(), { ...Artboards.active(), width: Math.max(1, w), height: Math.max(1, h) }); History.named('Mesa de trabajo', () => History.commit()); };
+      q('ppW').onchange = e => abSize(Units.fromU(+e.target.value), Artboards.active().height);
+      q('ppH').onchange = e => abSize(Artboards.active().width, Units.fromU(+e.target.value));
       q('ppUnit').onchange = e => { App.doc.units = e.target.value; History.named('Unidades', () => History.commit()); Panels.refreshControlBar(); Rulers.draw(); };
       q('ppSetup').onclick = () => NewDoc.setup(); q('ppAb').onclick = () => Tools.use('artboard');
       q('ppRul').onclick = () => { Rulers.toggle(); this.render(); }; q('ppGrid').onclick = () => { Grid.toggle(); this.render(); };

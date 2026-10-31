@@ -87,10 +87,16 @@ const View = {
     this.apply();
   },
   setZoom(z) { this.zoomAt(z / App.view.zoom); },
+  /* encaja la mesa de trabajo activa en la ventana */
   fit() {
-    const r = App.els.stage.getBoundingClientRect(), d = App.doc;
-    const z = Math.min((r.width - 80) / d.width, (r.height - 80) / d.height);
-    App.view.zoom = z; App.view.x = (r.width - d.width * z) / 2; App.view.y = (r.height - d.height * z) / 2;
+    const d = App.doc;
+    this.fitRect(typeof Artboards !== 'undefined' ? Artboards.active() : { x: 0, y: 0, width: d.width, height: d.height });
+  },
+  fitRect(b) {
+    const r = App.els.stage.getBoundingClientRect();
+    if (!b || !b.width || !b.height || !r.width) return;
+    const z = clamp(Math.min((r.width - 80) / b.width, (r.height - 80) / b.height), 0.03, 64);
+    App.view.zoom = z; App.view.x = (r.width - b.width * z) / 2 - b.x * z; App.view.y = (r.height - b.height * z) / 2 - b.y * z;
     this.apply();
   },
   updateArtboard() {
@@ -106,6 +112,7 @@ const View = {
     Object.entries({ x: -b, y: -b, width: d.width + 2 * b, height: d.height + 2 * b }).forEach(([k, v]) => bl.setAttribute(k, v));
     bl.style.display = b > 0 ? '' : 'none';
     const gr = $('gridRect'); if (gr) { gr.setAttribute('width', d.width); gr.setAttribute('height', d.height); }
+    if (typeof Artboards !== 'undefined') Artboards.render();
   },
 };
 
