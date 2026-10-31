@@ -112,6 +112,7 @@ const ContextMenu = {
       ...(s.length > 1 ? [['Crear máscara de recorte', 'Ctrl+7', () => Actions.makeClip()], ['Crear trazado compuesto', 'Ctrl+8', () => Pathfinder.compound()]] : []),
       ...(clip ? [['Liberar máscara de recorte', 'Ctrl+Alt+7', () => Actions.releaseClip()]] : []),
       ...(s.length <= 2 ? [['Unir', 'Ctrl+J', () => PathOps.join()]] : []),
+      ...(s.some(e => e.tagName === 'use') ? [['Editar símbolo', '', () => Symbols.edit(s.find(e => e.tagName === 'use'))], ['Romper vínculo con símbolo', '', () => Symbols.breakLink()]] : []),
       ['Contornear trazo', '', () => PathOps.outlineStroke()],
       ...(s.some(e => e.tagName === 'text') ? [['Crear contornos', 'Ctrl+Shift+O', () => TextOutline.run()]] : []),
       ...(s.some(e => e.tagName === 'image') ? [['Calco de imagen…', '', () => Trace.dialog()]] : []), '-',

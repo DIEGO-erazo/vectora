@@ -124,7 +124,9 @@
       <div class="panel" id="pSwatches">
         <div class="panel-head">Muestras</div>
         <div class="panel-body"><div id="swatchGrid"></div>
-          <div class="btn-group-label">Recientes</div><div id="recentGrid" class="sw-row"></div></div>
+          <div class="btn-group-label">Recientes</div><div id="recentGrid" class="sw-row"></div>
+          <div class="btn-group-label">Motivos <span class="hint">(Alt+clic: editar)</span></div><div id="patGrid" class="pat-grid"></div>
+          <div class="btn-group-label">Biblioteca de motivos</div><div id="patLib" class="pat-lib"></div></div>
         <div class="panel-foot">
           <button id="swAdd" title="Nueva muestra con el color actual">＋</button>
           <span style="color:#777;font-size:11px">Alt+clic en una muestra propia para borrarla</span>
@@ -142,6 +144,19 @@
           <label>Discontinua</label><input type="text" id="psDash" placeholder="ej. 4 2">
           <label>Punta inicial</label><select id="psStart"></select>
           <label>Punta final</label><select id="psEnd"></select>
+        </div>
+      </div>
+
+      <div class="panel" id="pSymbols">
+        <div class="panel-head">Símbolos</div>
+        <div class="panel-body"><div id="symGrid"></div></div>
+        <div class="panel-foot">
+          <button id="symNew" title="Nuevo símbolo con la selección (F8)">＋</button>
+          <button id="symPlace" title="Colocar instancia (o doble clic / arrastrar al lienzo)">⤓</button>
+          <button id="symEdit" title="Editar símbolo">✎</button>
+          <button id="symBreak" title="Romper vínculo con el símbolo">⛓</button>
+          <button id="symRedef" title="Redefinir el símbolo con la selección">⟳</button>
+          <button id="symDel" title="Eliminar símbolo">🗑</button>
         </div>
       </div>
 
@@ -255,6 +270,7 @@
 <script src="js/panels2.js"></script>
 <script src="js/panels3.js"></script>
 <script src="js/layers2.js"></script>
+<script src="js/symbols.js"></script>
 <script src="js/menus.js"></script>
 <script src="js/newdoc.js"></script>
 <script src="js/files.js"></script>
