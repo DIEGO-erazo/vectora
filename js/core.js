@@ -163,8 +163,22 @@ const ImageStore = {
 
 const History = {
   stack: [], index: -1, max: 120, maxChars: 40e6,
+  /* nombre del paso para el panel Historial: acción de menú en curso o herramienta activa */
+  label() {
+    if (App.actionLabel) return App.actionLabel;
+    const t = typeof TOOL_INFO !== 'undefined' && TOOL_INFO[App.toolName];
+    return t ? t[0] : 'Edición';
+  },
+  /* ejecuta fn con un nombre de acción (también si fn es asíncrona, p. ej. con diálogo) */
+  named(label, fn) {
+    App.actionLabel = label;
+    let r; try { r = fn(); } catch (e) { App.actionLabel = null; throw e; }
+    Promise.resolve(r).finally(() => { if (App.actionLabel === label) App.actionLabel = null; });
+    return r;
+  },
+  goTo(i) { if (i >= 0 && i < this.stack.length && i !== this.index) { this.index = i; this.restore(this.stack[i]); } },
   snapshot() {
-    return { html: ImageStore.pack(App.els.content.innerHTML), sel: App.selection.map(e => e.id),
+    return { label: this.stack.length ? this.label() : 'Abrir', time: Date.now(), html: ImageStore.pack(App.els.content.innerHTML), sel: App.selection.map(e => e.id),
       layer: App.activeLayer && App.activeLayer.id, doc: JSON.parse(JSON.stringify(App.doc)) };
   },
   commit() {

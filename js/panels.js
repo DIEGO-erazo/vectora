@@ -43,14 +43,14 @@ const Panels = {
     if (App.selection.length) {
       setStyle(App.selection, which, value);
       if (which === 'stroke') Arrows.recolor(App.selection);
-      if (commit) History.commit();
+      if (commit) History.named(which === 'fill' ? 'Relleno' : 'Trazo', () => History.commit());
       Selection.draw();
     }
     this.refresh();
   },
   setStrokeAttr(attr, value) {
     if (attr === 'stroke-width') App.strokeWidth = +value;
-    if (App.selection.length) { setStyle(App.selection, attr, value); History.commit(); Selection.draw(); }
+    if (App.selection.length) { setStyle(App.selection, attr, value); History.named('Trazo', () => History.commit()); Selection.draw(); }
     this.refresh();
   },
 
@@ -136,18 +136,9 @@ const Panels = {
 
   /* ----- barra de control: posición, tamaño, rotación, opacidad ----- */
   initControlBar() {
-    const onBox = (fn) => e => {
-      if (!App.selection.length) return;
-      const b = Selection.box(); if (!b) return;
-      const raw = +e.target.value, M = fn(b, e.target.id === 'cbRot' ? raw : Units.fromU(raw)); if (!M) return;
-      App.selection.forEach(el => { Geo.applyDoc(el, M); normalizeTransform(el); });
-      History.commit(); Selection.changed();
-    };
-    $('cbX').onchange = onBox((b, v) => new DOMMatrix().translate(v - b.x, 0));
-    $('cbY').onchange = onBox((b, v) => new DOMMatrix().translate(0, v - b.y));
-    $('cbW').onchange = onBox((b, v) => v > 0 && b.width ? Geo.scaleAbout(v / b.width, 1, b.x, b.y) : null);
-    $('cbH').onchange = onBox((b, v) => v > 0 && b.height ? Geo.scaleAbout(1, v / b.height, b.x, b.y) : null);
-    $('cbRot').onchange = onBox((b, v) => Geo.rotateAbout(v - (App.selection.length === 1 ? Geo.angle(App.selection[0]) : 0), b.x + b.width / 2, b.y + b.height / 2));
+    /* mismos campos que el panel Transformar, con su punto de referencia */
+    for (const [id, f] of [['cbX', 'x'], ['cbY', 'y'], ['cbW', 'w'], ['cbH', 'h'], ['cbRot', 'rot']])
+      $(id).onchange = e => Xf.set(f, f === 'rot' ? +e.target.value : Units.fromU(+e.target.value));
     $('cbOpacity').onchange = e => {
       const v = clamp(+e.target.value, 0, 100) / 100;
       App.selection.forEach(el => v === 1 ? el.removeAttribute('opacity') : el.setAttribute('opacity', v));
@@ -155,9 +146,9 @@ const Panels = {
     };
   },
   refreshControlBar() {
-    const s = App.selection, b = s.length ? Selection.box() : null;
+    const s = App.selection, b = s.length ? Selection.box() : null, a = b && Xf.point(b);
     $('cbSelLabel').textContent = !s.length ? 'Sin selección' : s.length === 1 ? objName(s[0]).replace(/[<>]/g, '') : `${s.length} objetos`;
-    for (const [id, v] of [['cbX', b && b.x], ['cbY', b && b.y], ['cbW', b && b.width], ['cbH', b && b.height]])
+    for (const [id, v] of [['cbX', a && a.x], ['cbY', a && a.y], ['cbW', b && b.width], ['cbH', b && b.height]])
       if (document.activeElement !== $(id)) $(id).value = v == null ? '' : Units.fmt(v);
     $('cbUnit').textContent = Units.u;
     if (document.activeElement !== $('cbRot')) $('cbRot').value = s.length === 1 ? round(Geo.angle(s[0]), 1) : '';
@@ -183,7 +174,7 @@ const Panels = {
     for (const b of btns) {
       if (b[1] === null) { box.insertAdjacentHTML('beforeend', `<div class="btn-group-label">${b[0]}</div>`); continue; }
       const el = document.createElement('button'); el.className = 'icon-btn'; el.title = b[1]; el.innerHTML = b[2];
-      el.onclick = () => Actions.align(b[0]); box.appendChild(el);
+      el.onclick = () => History.named(b[1], () => Actions.align(b[0])); box.appendChild(el);
     }
     box.insertAdjacentHTML('beforeend', '<div class="btn-group-label" id="alignTo">Con un objeto se alinea a la mesa de trabajo</div>');
   },
@@ -204,7 +195,7 @@ const Panels = {
     for (const b of btns) {
       if (b[1] === null) { box.insertAdjacentHTML('beforeend', `<div class="btn-group-label">${b[0]}</div>`); continue; }
       const el = document.createElement('button'); el.className = 'icon-btn'; el.title = b[1]; el.innerHTML = b[2];
-      el.onclick = () => Pathfinder.run(b[0]); box.appendChild(el);
+      el.onclick = () => History.named(b[1].replace(/ \(.*\)/, ''), () => Pathfinder.run(b[0])); box.appendChild(el);
     }
   },
 

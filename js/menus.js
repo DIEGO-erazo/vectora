@@ -274,7 +274,8 @@ const MENUS = {
   'Ventana': [
     ['Documento siguiente', 'Ctrl+Tab', () => Docs.next(1)], ['Documento anterior', 'Ctrl+Shift+Tab', () => Docs.next(-1)],
     ['Pantalla de inicio', '', () => { Docs.capture(); Home.show(); }], '-',
-    ['Color', '', () => Menus.togglePanel('pColor')], ['Muestras', '', () => Menus.togglePanel('pSwatches')], ['Trazo', '', () => Menus.togglePanel('pStroke')],
+    ['Propiedades', '', () => Menus.togglePanel('pProps')], ['Transformar', 'Shift+F8', () => Menus.togglePanel('pTransform')],
+    ['Historial', '', () => Menus.togglePanel('pHistory')], ['Color', 'F6', () => Menus.togglePanel('pColor')], ['Muestras', '', () => Menus.togglePanel('pSwatches')], ['Trazo', '', () => Menus.togglePanel('pStroke')],
     ['Degradado', '', () => Menus.togglePanel('pGradient')], ['Transparencia', '', () => Menus.togglePanel('pTransp')], ['Carácter', '', () => Menus.togglePanel('pChar')],
     ['Alinear', '', () => Menus.togglePanel('pAlign')], ['Buscatrazos', '', () => Menus.togglePanel('pPathfinder')], ['Capas', '', () => Menus.togglePanel('pLayers')],
   ],
@@ -345,7 +346,7 @@ const Menus = {
       const b = document.createElement('div'); b.className = 'menu-btn'; b.textContent = name; bar.appendChild(b);
       b.onmousedown = e => { e.stopPropagation(); this.openMenu === name ? this.close() : this.show(name, b); };
       b.onmouseenter = () => { if (this.openMenu && this.openMenu !== name) this.show(name, b); };
-      for (const it of MENUS[name]) if (it !== '-' && it[1]) this.shortcuts.push({ combo: this.parse(it[1]), fn: it[2] });
+      for (const it of MENUS[name]) if (it !== '-' && it[1]) this.shortcuts.push({ combo: this.parse(it[1]), fn: () => History.named(it[0].split(' ▸ ').pop().replace('…', ''), it[2]) });
     }
     document.addEventListener('mousedown', e => { if (!pop.contains(e.target)) this.close(); });
   },
@@ -357,18 +358,14 @@ const Menus = {
       if (it === '-') { pop.insertAdjacentHTML('beforeend', '<div class="menu-sep"></div>'); continue; }
       const [label, key, fn, check] = it, row = document.createElement('div'); row.className = 'menu-item';
       row.innerHTML = `<span>${check && check() ? '✓ ' : ''}${label}</span><span class="kbd">${key.replace('Delete', 'Supr')}</span>`;
-      row.onclick = () => { this.close(); fn(); };
+      row.onclick = () => { this.close(); History.named(label.split(' ▸ ').pop().replace('…', ''), fn); };
       pop.appendChild(row);
     }
     const r = btn.getBoundingClientRect(); pop.style.left = r.left + 'px'; pop.style.top = r.bottom + 'px'; pop.hidden = false;
   },
   close() { this.openMenu = null; $('menuPopup').hidden = true; document.querySelectorAll('.menu-btn').forEach(m => m.classList.remove('open')); },
   refreshChecks() { /* las marcas se recalculan al abrir el menú */ },
-  togglePanel(id) {
-    const p = $(id), hidden = p.style.display === 'none', collapsed = p.classList.contains('collapsed');
-    if (hidden || collapsed) { p.style.display = ''; p.classList.remove('collapsed'); p.scrollIntoView({ block: 'nearest' }); }
-    else p.style.display = 'none';
-  },
+  togglePanel(id) { Dock.show(id); },
   parse(s) {
     const parts = s.split('+'), key = parts.pop();
     return { ctrl: parts.includes('Ctrl'), shift: parts.includes('Shift'), alt: parts.includes('Alt'), key: key.toLowerCase() };
