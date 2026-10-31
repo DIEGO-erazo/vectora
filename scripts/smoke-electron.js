@@ -23,10 +23,14 @@ app.on('browser-window-created', (e, win) => {
       r.pdfBytes = pdf.size;
       await Import.openFile({ file: new File([pdf], 'ida-y-vuelta.pdf', { type: 'application/pdf' }) });
       r.reimported = Layers.objects().length > 0 && App.doc.title === 'ida-y-vuelta';
+      /* calco de imagen y crear contornos con las librerías incluidas */
+      await Lib.load(Lib.url('trace')); r.trace = typeof ImageTracer === 'object';
+      const t = addObject(svgEl('text', { x: 20, y: 80, 'font-family': 'Arial', 'font-size': 40, fill: '#000' })); svgEl('tspan', { x: 20 }, t).textContent = 'Vectora';
+      Selection.set([t]); await TextOutline.run(); r.outlines = App.selection[0] && App.selection[0].tagName === 'path';
       return r;
-    })()`).catch(err => ({ error: String(err) }));
+    })()`, true).catch(err => ({ error: String(err) }));
     if (shot) fs.writeFileSync(shot, (await win.capturePage()).toPNG());
-    const ok = result.desktop && result.pdfBytes > 500 && result.reimported && !result.error;
+    const ok = result.desktop && result.pdfBytes > 500 && result.reimported && result.trace && result.outlines && !result.error;
     console.log(JSON.stringify({ ok, ...result, consoleErrors: errors }, null, 2));
     win.destroy(); app.exit(ok ? 0 : 1);
   });

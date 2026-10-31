@@ -2,7 +2,7 @@
    · Archivos propios: primero la red (siempre la última versión) y, sin conexión, la copia guardada.
    · Librerías del CDN (versiones fijas, inmutables): primero la copia guardada. */
 'use strict';
-const VERSION = 'vectora-1.0.0';
+const VERSION = 'vectora-1.1.0';
 
 self.addEventListener('install', e => e.waitUntil((async () => {
   const cache = await caches.open(VERSION);
