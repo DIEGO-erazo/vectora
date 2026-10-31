@@ -10,8 +10,9 @@ const Xf = {
   set(field, v) {
     const sel = App.selection.filter(e => !Layers.isLocked(e)); if (!sel.length || !isFinite(v)) return;
     const b = Geo.selBox(sel), a = this.point(b); let M = null;
-    if (field === 'x') M = new DOMMatrix().translate(v - a.x, 0);
-    if (field === 'y') M = new DOMMatrix().translate(0, v - a.y);
+    const o = Units.origin(); /* X e Y se muestran respecto al origen de las reglas */
+    if (field === 'x') M = new DOMMatrix().translate(v + o.x - a.x, 0);
+    if (field === 'y') M = new DOMMatrix().translate(0, v + o.y - a.y);
     if (field === 'w' && v > 0 && b.width) { const s = v / b.width; M = Geo.scaleAbout(s, this.lock ? s : 1, a.x, a.y); }
     if (field === 'h' && v > 0 && b.height) { const s = v / b.height; M = Geo.scaleAbout(this.lock ? s : 1, s, a.x, a.y); }
     if (field === 'rot') M = Geo.rotateAbout(v - (sel.length === 1 ? Geo.angle(sel[0]) : 0), a.x, a.y);
@@ -57,7 +58,7 @@ function bindTransformFields(root) {
 function refreshTransformFields(root) {
   if (!root) return;
   const s = App.selection, b = s.length ? Geo.selBox(s) : null, a = b && Xf.point(b);
-  const vals = { x: a && Units.fmt(a.x), y: a && Units.fmt(a.y), w: b && Units.fmt(b.width), h: b && Units.fmt(b.height), rot: s.length === 1 ? round(Geo.angle(s[0]), 2) : (s.length ? 0 : '') };
+  const o = Units.origin(), vals = { x: a && Units.fmt(a.x - o.x), y: a && Units.fmt(a.y - o.y), w: b && Units.fmt(b.width), h: b && Units.fmt(b.height), rot: s.length === 1 ? round(Geo.angle(s[0]), 2) : (s.length ? 0 : '') };
   root.querySelectorAll('[data-f]').forEach(inp => {
     if (inp.dataset.f === 'shear') { inp.disabled = !s.length; return; }
     if (document.activeElement !== inp) inp.value = vals[inp.dataset.f] ?? '';

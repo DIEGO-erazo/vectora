@@ -148,7 +148,8 @@ const Panels = {
   refreshControlBar() {
     const s = App.selection, b = s.length ? Selection.box() : null, a = b && Xf.point(b);
     $('cbSelLabel').textContent = !s.length ? 'Sin selección' : s.length === 1 ? objName(s[0]).replace(/[<>]/g, '') : `${s.length} objetos`;
-    for (const [id, v] of [['cbX', a && a.x], ['cbY', a && a.y], ['cbW', b && b.width], ['cbH', b && b.height]])
+    const o = Units.origin();
+    for (const [id, v] of [['cbX', a && a.x - o.x], ['cbY', a && a.y - o.y], ['cbW', b && b.width], ['cbH', b && b.height]])
       if (document.activeElement !== $(id)) $(id).value = v == null ? '' : Units.fmt(v);
     $('cbUnit').textContent = Units.u;
     if (document.activeElement !== $('cbRot')) $('cbRot').value = s.length === 1 ? round(Geo.angle(s[0]), 1) : '';

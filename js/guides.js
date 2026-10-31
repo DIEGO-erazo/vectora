@@ -127,7 +127,7 @@ const Rulers = {
       const ctx = cv.getContext('2d'); ctx.scale(dpr, dpr);
       ctx.fillStyle = '#2b2b2b'; ctx.fillRect(0, 0, W, H);
       ctx.strokeStyle = '#7a7a7a'; ctx.fillStyle = '#b5b5b5'; ctx.font = '9px Segoe UI, sans-serif'; ctx.lineWidth = 1;
-      const len = horiz ? W : H, off = horiz ? App.view.x : App.view.y;
+      const o = Units.origin(), len = horiz ? W : H, off = horiz ? App.view.x + o.x * App.view.zoom : App.view.y + o.y * App.view.zoom;
       const start = Math.floor((-off / z) / minor) * minor, end = (len - off) / z;
       ctx.beginPath();
       for (let v = start; v <= end; v += minor) {
