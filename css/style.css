@@ -341,3 +341,10 @@ input[type=range]{height:12px;accent-color:var(--accent)}
 #taskBar button:hover{background:#444;color:#fff}
 #taskBar .tb-i{font-size:12px;opacity:.85}
 #taskBar .tb-more{padding:5px 8px;color:#aaa}
+
+/* Capas: miniaturas y plantillas */
+.ly-thumb{width:30px;height:22px;flex:none;margin-right:7px;background:#fff;border:1px solid #555;display:inline-block}
+.ly-row{height:28px}
+.ly-row.template .ly-name{font-style:italic;color:var(--dim)}
+.ly-dot.has{width:10px;height:10px;cursor:grab}
+#content .layer[data-template]{opacity:.5}

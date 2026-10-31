@@ -112,6 +112,7 @@ const IO = {
     svg.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
     if (only) only.forEach(e => e.setAttribute('data-exp', '1'));
     for (const ch of App.els.content.children) {
+      if (forExport && ch.hasAttribute('data-noprint')) continue; /* capas no imprimibles o de plantilla */
       const c = ch.cloneNode(true);
       if (forExport) c.querySelectorAll('[opacity="0"]').forEach(e => { if (e.tagName === 'text') e.removeAttribute('opacity'); });
       if (only && c.classList.contains('layer')) [...c.children].forEach(o => { if (!o.hasAttribute('data-exp')) o.remove(); });
