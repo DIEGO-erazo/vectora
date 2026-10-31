@@ -332,3 +332,12 @@ input[type=range]{height:12px;accent-color:var(--accent)}
   background:#d7d7d7;color:#222;font-size:12px;border-bottom:1px solid #999}
 #isoBar[hidden]{display:none}
 #isoBar button{background:none;border:0;font-size:15px;cursor:pointer;color:#222;padding:0 4px}
+
+/* Barra de tareas contextual */
+#taskBar{position:absolute;z-index:7;display:flex;gap:2px;padding:4px;background:#2b2b2b;border:1px solid #111;border-radius:8px;
+  box-shadow:0 6px 18px rgba(0,0,0,.45)}
+#taskBar[hidden]{display:none}
+#taskBar button{display:flex;align-items:center;gap:5px;background:none;border:0;border-radius:5px;padding:5px 9px;cursor:pointer;color:#ddd;white-space:nowrap;font-size:12px}
+#taskBar button:hover{background:#444;color:#fff}
+#taskBar .tb-i{font-size:12px;opacity:.85}
+#taskBar .tb-more{padding:5px 8px;color:#aaa}

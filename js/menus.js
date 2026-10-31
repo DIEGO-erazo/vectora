@@ -299,6 +299,7 @@ const MENUS = {
   'Ventana': [
     ['Documento siguiente', 'Ctrl+Tab', () => Docs.next(1)], ['Documento anterior', 'Ctrl+Shift+Tab', () => Docs.next(-1)],
     ['Pantalla de inicio', '', () => { Docs.capture(); Home.show(); }], '-',
+    ['Barra de tareas contextual', '', () => TaskBar.toggle(), () => TaskBar.on], '-',
     ['Propiedades', '', () => Menus.togglePanel('pProps')], ['Transformar', 'Shift+F8', () => Menus.togglePanel('pTransform')],
     ['Historial', '', () => Menus.togglePanel('pHistory')], ['Color', 'F6', () => Menus.togglePanel('pColor')], ['Muestras', '', () => Menus.togglePanel('pSwatches')], ['Trazo', '', () => Menus.togglePanel('pStroke')],
     ['Degradado', '', () => Menus.togglePanel('pGradient')], ['Transparencia', '', () => Menus.togglePanel('pTransp')], ['Carácter', '', () => Menus.togglePanel('pChar')],

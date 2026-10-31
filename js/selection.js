@@ -77,6 +77,12 @@ const Selection = {
     }
     if (App.tool && App.tool.overlay) App.tool.overlay(g);
     if (typeof SmartGuides !== 'undefined') SmartGuides.draw(g);
+    /* etiqueta de medida junto al cursor (mover, escalar, rotar, dibujar) */
+    if (App.measure && App.pointer) {
+      const t = svgEl('text', { x: App.pointer.x + 16, y: App.pointer.y + 30, fill: '#fff', 'font-size': 11, 'font-family': 'Segoe UI, sans-serif' }, g);
+      t.textContent = App.measure;
+      const bb = t.getBBox(); t.before(svgEl('rect', { x: bb.x - 5, y: bb.y - 3, width: bb.width + 10, height: bb.height + 6, rx: 3, fill: 'rgba(30,30,30,.88)' }));
+    }
   },
 };
 
@@ -115,13 +121,13 @@ const Transformer = {
         if (vOnly) SmartGuides.lines = SmartGuides.lines.filter(l => l.axis === 'y');
       }
       M = new DOMMatrix().translate(dx, dy);
-      $('sbHint').textContent = `dX: ${round(dx, 1)}  dY: ${round(dy, 1)}`;
+      App.measure = `dX: ${Units.fmt(dx)}  dY: ${Units.fmt(dy)} ${Units.u}`;
     } else if (a.kind === 'rotate') {
       const c = a.center;
       let ang = (Math.atan2(p.y - c.y, p.x - c.x) - Math.atan2(a.start.y - c.y, a.start.x - c.x)) * 180 / Math.PI;
       if (ev.shiftKey) ang = Math.round(ang / 45) * 45;
       M = Geo.rotateAbout(ang, c.x, c.y);
-      $('sbHint').textContent = `Ángulo: ${round(ang, 1)}°`;
+      App.measure = `${round(ang, 1)}°`;
     } else {
       if (!ev.ctrlKey && !ev.altKey && a.fr.F.isIdentity) p = SmartGuides.snapPoint(p);
       p = Geo.pt(a.fr.Fi, p.x, p.y); /* trabajar en el marco (girado) del cuadro */
@@ -138,7 +144,7 @@ const Transformer = {
       }
       if (Math.abs(sx) < 1e-3) sx = 1e-3; if (Math.abs(sy) < 1e-3) sy = 1e-3;
       M = a.fr.F.multiply(Geo.scaleAbout(sx, sy, ax, ay)).multiply(a.fr.Fi);
-      $('sbHint').textContent = `An: ${round(b.width * Math.abs(sx), 1)}  Al: ${round(b.height * Math.abs(sy), 1)}`;
+      App.measure = `An: ${Units.fmt(b.width * Math.abs(sx))}  Al: ${Units.fmt(b.height * Math.abs(sy))} ${Units.u}`;
     }
     a.els.forEach(e => Geo.applyDoc(e, M));
     a.M = M;
@@ -149,7 +155,7 @@ const Transformer = {
     if (this.active.M) App.lastTransform = { matrix: this.active.M, duplicate: !!this.active.duplicate };
     SmartGuides.clear();
     this.active.els.forEach(normalizeTransform);
-    this.active = null; $('sbHint').textContent = '';
+    this.active = null; App.measure = null;
     History.commit(); Selection.changed();
   },
 };

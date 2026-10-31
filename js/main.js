@@ -5,7 +5,7 @@
   Object.assign(App.els, { stage: $('stage'), viewport: $('viewport'), content: $('content'), overlay: $('overlay'), artboard: $('artboard') });
   document.documentElement.classList.add('booting'); /* sin interacción hasta recuperar el autoguardado */
   Tools.build(); Menus.build(); Panels.init(); Rulers.init();
-  Dock.init(); TransformPanel.init(); PropsPanel.init(); HistoryPanel.init(); ArtboardsPanel.init();
+  Dock.init(); TransformPanel.init(); PropsPanel.init(); HistoryPanel.init(); ArtboardsPanel.init(); TaskBar.init();
 
   const session = await IO.restore();
   Tools.use('select');
@@ -36,6 +36,7 @@
   stage.addEventListener('pointermove', ev => {
     const p = View.screenToDoc(ev.clientX, ev.clientY);
     $('sbPos').textContent = `X: ${Units.fmt(p.x)}  Y: ${Units.fmt(p.y)} ${Units.u}`;
+    App.pointer = stagePt(ev);
     const t = tool();
     if (pressed) t.move && t.move(p, ev, stagePt(ev));
     else t.hover && t.hover(p, ev, stagePt(ev));

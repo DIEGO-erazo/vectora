@@ -100,7 +100,7 @@ const Tools = {
     $('cbToolOpts').innerHTML = App.tool.options ? App.tool.options() : '';
     if (App.tool.bindOptions) App.tool.bindOptions();
     if (App.tool.activate) App.tool.activate();
-    Selection.draw();
+    Selection.draw(); if (typeof TaskBar !== 'undefined') TaskBar.schedule();
   },
 };
 
@@ -206,10 +206,11 @@ function dragShapeTool(build, extra = {}) {
       const r = { x: Math.min(x, x + w), y: Math.min(y, y + h), w: Math.abs(w), h: Math.abs(h), x0: x, y0: y, x1: x + w, y1: y + h, ev };
       if (!this.el) { this.el = build(r); if (!addObject(this.el)) { this.p0 = null; return; } }
       else this.update(this.el, r);
+      App.measure = this.noConstrain ? `${Units.fmt(Math.hypot(w, h))} ${Units.u}  ${round(Math.atan2(-h, w) * 180 / Math.PI, 1)}°` : `An: ${Units.fmt(r.w)}  Al: ${Units.fmt(r.h)} ${Units.u}`;
       Selection.set([this.el]);
     },
     up(p, ev) {
-      SmartGuides.clear();
+      SmartGuides.clear(); App.measure = null;
       if (this.el) { History.commit(); }
       else if (this.p0 && this.dialog) this.dialog(this.p0);
       this.p0 = null; this.el = null; Selection.draw();
