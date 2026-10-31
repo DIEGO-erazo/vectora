@@ -455,3 +455,16 @@ input[type=range]{height:12px;accent-color:var(--accent)}
 .ks-key{min-width:110px;background:var(--bg3);border:1px solid var(--edge);border-radius:2px;padding:2px 6px;cursor:pointer;font-family:inherit;font-size:11.5px}
 .ks-key.wait{border-color:var(--accent);color:var(--accent)}
 #scCode{width:100%;height:280px;resize:vertical;font:12px/1.45 Consolas,'Courier New',monospace;background:var(--bg1);color:var(--text);border:1px solid var(--edge);padding:8px;box-sizing:border-box;tab-size:2}
+/* Navegador, Información y vista girada */
+#navBox{position:relative;height:150px;background:var(--paste,#535353);border:1px solid var(--edge);overflow:hidden;cursor:crosshair;touch-action:none}
+#navSvg{width:100%;display:block;pointer-events:none}
+#navView{position:absolute;border:2px solid #e5332a;pointer-events:none;box-sizing:border-box}
+.nav-zoom{display:flex;align-items:center;gap:4px;margin-top:6px}
+.nav-zoom input{flex:1}
+#navPct{min-width:44px;text-align:right;color:var(--dim);font-size:11px}
+.info-grid{display:grid;grid-template-columns:24px 1fr 24px 1fr;gap:4px 6px;font-size:12px;margin-bottom:8px}
+.info-grid.info-col{grid-template-columns:56px 1fr}
+.info-grid span{color:var(--dim)}
+.info-grid b{font-weight:500}
+.info-note{color:var(--dim);font-size:11px}
+.view-rotated .ruler,.view-rotated .ruler-corner{visibility:hidden}

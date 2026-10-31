@@ -73,6 +73,7 @@ const DOCK_GROUPS = [
   { id: 'gStroke', panels: ['pStroke', 'pBrushes', 'pTransp', 'pAppearance', 'pGStyles'], collapsed: true },
   { id: 'gText', panels: ['pChar', 'pPara', 'pTextStyles', 'pGlyphs'], collapsed: true },
   { id: 'gXf', panels: ['pTransform', 'pAlign', 'pPathfinder'], collapsed: true },
+  { id: 'gNav', panels: ['pNavigator', 'pInfo'], collapsed: true },
 ];
 const Dock = {
   state: (() => { try { return JSON.parse(localStorage.getItem('vectora-dock') || '{}'); } catch (e) { return {}; } })(),

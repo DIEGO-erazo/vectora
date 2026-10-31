@@ -206,7 +206,7 @@ function initRulerOrigin() {
     e.preventDefault();
     const up = ev => {
       window.removeEventListener('pointerup', up);
-      const r = App.els.stage.getBoundingClientRect();
+      const r = View.stageRect();
       if (ev.clientX < r.left + 20 || ev.clientY < r.top + 20) return;
       const p = View.screenToDoc(ev.clientX, ev.clientY); App.doc.origin = { x: round(p.x, 2), y: round(p.y, 2) };
       History.named('Origen de reglas', () => History.commit()); Rulers.draw(); Panels.refreshControlBar(); App.emit('refpoint');

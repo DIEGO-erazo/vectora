@@ -329,7 +329,7 @@ App.tools.zoom = {
     const p0 = Marquee.p0, p1 = Marquee.p1; Marquee.el && Marquee.el.remove(); Marquee.el = null; Marquee.p1 = null;
     if (p1 && !this.alt && Math.hypot(sp.x - this.sp0.x, sp.y - this.sp0.y) > 6) {
       /* arrastrar: encuadrar el rectángulo marcado */
-      const r = App.els.stage.getBoundingClientRect(), w = Math.abs(p1.x - p0.x), h = Math.abs(p1.y - p0.y);
+      const r = View.stageRect(), w = Math.abs(p1.x - p0.x), h = Math.abs(p1.y - p0.y);
       const z = clamp(Math.min(r.width / w, r.height / h), 0.03, 64), cx = Math.min(p0.x, p1.x) + w / 2, cy = Math.min(p0.y, p1.y) + h / 2;
       Object.assign(App.view, { zoom: z, x: r.width / 2 - cx * z, y: r.height / 2 - cy * z }); View.apply();
     } else View.zoomAt(this.alt ? 1 / 1.6 : 1.6, this.sp0.x, this.sp0.y);

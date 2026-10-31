@@ -47,7 +47,7 @@ const SmartGuides = {
   },
   clear() { this.lines = []; this.hit = null; },
   draw(g) {
-    const r = App.els.stage.getBoundingClientRect();
+    const r = View.stageRect();
     if (this.hit) {
       const s = View.docToStage(this.hit.x, this.hit.y);
       svgEl('rect', { x: s.x - 4, y: s.y - 4, width: 8, height: 8, fill: 'none', stroke: '#ff3fbf', 'stroke-width': 1.5 }, g);
@@ -65,7 +65,7 @@ const SmartGuides = {
 const Guides = {
   list() { return App.doc.guides || (App.doc.guides = []); },
   draw(g) {
-    const r = App.els.stage.getBoundingClientRect();
+    const r = View.stageRect();
     for (const gd of this.list()) {
       const s = View.docToStage(gd.v, gd.v), sel = gd === this.dragging;
       const attrs = { stroke: sel ? '#1e90ff' : '#00c8ff', 'stroke-width': 1, 'stroke-opacity': .9 };
@@ -87,7 +87,7 @@ const Guides = {
     const move = e => { const p = View.screenToDoc(e.clientX, e.clientY); gd.v = round(gd.axis === 'x' ? p.x : p.y, 2); Selection.draw(); };
     const up = e => {
       window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up);
-      const r = App.els.stage.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+      const r = View.stageRect(), { x, y } = View.clientToStage(e.clientX, e.clientY);
       const off = Rulers.on ? 20 : 0;
       if (x < off || y < off || x > r.width || y > r.height) this.list().splice(this.list().indexOf(gd), 1);
       this.dragging = null; History.commit(); Selection.draw();

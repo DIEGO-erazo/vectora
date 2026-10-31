@@ -76,13 +76,13 @@ const View = {
     App.emit('view');
   },
   screenToDoc(cx, cy) {
-    const r = App.els.stage.getBoundingClientRect(), v = App.view;
-    return { x: (cx - r.left - v.x) / v.zoom, y: (cy - r.top - v.y) / v.zoom };
+    const s = View.clientToStage ? View.clientToStage(cx, cy) : { x: cx - View.stageRect().left, y: cy - View.stageRect().top }, v = App.view;
+    return { x: (s.x - v.x) / v.zoom, y: (s.y - v.y) / v.zoom };
   },
   docToStage(x, y) { const v = App.view; return { x: x * v.zoom + v.x, y: y * v.zoom + v.y }; },
   zoomAt(factor, sx, sy) {
     const v = App.view, nz = clamp(v.zoom * factor, 0.03, 64);
-    if (sx == null) { const r = App.els.stage.getBoundingClientRect(); sx = r.width / 2; sy = r.height / 2; }
+    if (sx == null) { const r = View.stageRect(); sx = r.width / 2; sy = r.height / 2; }
     v.x = sx - (sx - v.x) * (nz / v.zoom); v.y = sy - (sy - v.y) * (nz / v.zoom); v.zoom = nz;
     this.apply();
   },
@@ -93,7 +93,7 @@ const View = {
     this.fitRect(typeof Artboards !== 'undefined' ? Artboards.active() : { x: 0, y: 0, width: d.width, height: d.height });
   },
   fitRect(b) {
-    const r = App.els.stage.getBoundingClientRect();
+    const r = View.stageRect();
     if (!b || !b.width || !b.height || !r.width) return;
     const z = clamp(Math.min((r.width - 80) / b.width, (r.height - 80) / b.height), 0.03, 64);
     App.view.zoom = z; App.view.x = (r.width - b.width * z) / 2 - b.x * z; App.view.y = (r.height - b.height * z) / 2 - b.y * z;
