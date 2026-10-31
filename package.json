@@ -1,0 +1,67 @@
+{
+  "name": "vectora",
+  "productName": "Vectora",
+  "version": "1.0.0",
+  "description": "Editor de gráficos vectoriales libre y de código abierto, inspirado en el flujo de trabajo de Illustrator.",
+  "main": "electron/main.js",
+  "author": "Diego Erazo <diegoerazo200@gmail.com>",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "web": "npx --yes serve -l 8080 .",
+    "check": "node scripts/check.js",
+    "dist": "electron-builder",
+    "dist:win": "electron-builder --win",
+    "dist:mac": "electron-builder --mac",
+    "dist:linux": "electron-builder --linux"
+  },
+  "dependencies": {
+    "jspdf": "2.5.1",
+    "pdfjs-dist": "3.11.174",
+    "svg2pdf.js": "2.2.3"
+  },
+  "devDependencies": {
+    "electron": "44.9.3",
+    "electron-builder": "26.17.0"
+  },
+  "build": {
+    "appId": "io.github.vectora",
+    "productName": "Vectora",
+    "copyright": "© 2026 Diego Erazo — Licencia MIT",
+    "directories": { "output": "dist" },
+    "files": [
+      "index.html", "manifest.webmanifest", "css/**", "js/**", "icons/**", "electron/**", "LICENSE",
+      "!**/*.map"
+    ],
+    "fileAssociations": [
+      { "ext": "svg", "name": "SVG", "description": "Dibujo vectorial SVG", "role": "Editor", "mimeType": "image/svg+xml" }
+    ],
+    "win": {
+      "target": [{ "target": "nsis", "arch": ["x64"] }, { "target": "portable", "arch": ["x64"] }],
+      "icon": "icons/icon-256.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Vectora",
+      "artifactName": "Vectora-Setup-${version}.${ext}"
+    },
+    "portable": { "artifactName": "Vectora-Portable-${version}.${ext}" },
+    "mac": {
+      "target": ["dmg"],
+      "icon": "icons/icon-512.png",
+      "category": "public.app-category.graphics-design",
+      "artifactName": "Vectora-${version}-${arch}.${ext}"
+    },
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "icon": "icons/icon-512.png",
+      "category": "Graphics",
+      "artifactName": "Vectora-${version}-${arch}.${ext}"
+    }
+  }
+}

@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data: blob:; worker-src 'self' blob: https://cdn.jsdelivr.net; connect-src 'self' data: blob: https://cdn.jsdelivr.net; object-src 'none'; base-uri 'self'">
+<title>Vectora — Editor vectorial libre</title>
+<meta name="description" content="Editor de gráficos vectoriales libre y de código abierto, inspirado en Illustrator.">
+<meta name="theme-color" content="#1e1e1e">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+  <!-- Barra de menús -->
+  <header id="menubar">
+    <img class="logo" src="icons/icon.svg" alt="Vectora" title="Vectora">
+    <nav id="menus"></nav>
+    <div class="doc-title" id="docTitle">Sin título-1 @ 100%</div>
+  </header>
+
+  <!-- Barra de control (contextual) -->
+  <div id="controlbar">
+    <span class="cb-label" id="cbSelLabel">Sin selección</span>
+    <span class="cb-sep"></span>
+    <label class="cb-item">Relleno
+      <button class="swatch-btn" id="cbFill" title="Relleno"></button></label>
+    <label class="cb-item">Trazo
+      <button class="swatch-btn stroke" id="cbStroke" title="Trazo"></button></label>
+    <label class="cb-item"><input type="number" id="cbStrokeW" min="0" step="0.5" value="1"> pt</label>
+    <span class="cb-sep"></span>
+    <label class="cb-item">Opacidad <input type="number" id="cbOpacity" min="0" max="100" value="100">%</label>
+    <span class="cb-sep"></span>
+    <label class="cb-item">X <input type="number" id="cbX" step="1"></label>
+    <label class="cb-item">Y <input type="number" id="cbY" step="1"></label>
+    <label class="cb-item">An <input type="number" id="cbW" step="1" min="0"></label>
+    <label class="cb-item">Al <input type="number" id="cbH" step="1" min="0"></label>
+    <span class="cb-item" id="cbUnit" title="Unidades del documento (Archivo ▸ Ajustar documento)">px</span>
+    <label class="cb-item">∠ <input type="number" id="cbRot" step="1"></label>
+    <span class="cb-sep"></span>
+    <span id="cbToolOpts"></span>
+  </div>
+
+  <div id="main">
+    <!-- Barra de herramientas -->
+    <aside id="toolbar">
+      <div id="tools"></div>
+      <div class="fs-widget">
+        <div id="fsFill" class="fs-box fill" title="Relleno (X para alternar)"></div>
+        <div id="fsStroke" class="fs-box stroke" title="Trazo (X para alternar)"></div>
+        <button id="fsSwap" title="Intercambiar relleno y trazo (Mayús+X)">⇄</button>
+        <button id="fsDefault" title="Relleno y trazo por defecto (D)">◩</button>
+        <button id="fsNone" title="Ninguno (/)">⊘</button>
+      </div>
+    </aside>
+
+    <!-- Área de trabajo -->
+    <section id="canvasWrap">
+      <svg id="stage" xmlns="http://www.w3.org/2000/svg">
+        <defs id="stageDefs">
+          <pattern id="noneHatch" width="8" height="8" patternUnits="userSpaceOnUse">
+            <rect width="8" height="8" fill="#fff"/><path d="M0 8L8 0" stroke="#e33" stroke-width="1.5"/>
+          </pattern>
+        </defs>
+        <g id="viewport">
+          <rect id="artboardShadow"/>
+          <rect id="artboard" fill="#fff"/>
+          <g id="content"></g>
+        </g>
+        <g id="overlay"></g>
+      </svg>
+      <textarea id="textEditor" spellcheck="false"></textarea>
+    </section>
+
+    <!-- Paneles -->
+    <aside id="dock">
+      <div class="panel" id="pColor">
+        <div class="panel-head">Color</div>
+        <div class="panel-body">
+          <div class="color-row">
+            <div class="fs-mini"><div id="pcFill" class="fs-box fill small"></div><div id="pcStroke" class="fs-box stroke small"></div></div>
+            <input type="color" id="pcPicker">
+            <input type="text" id="pcHex" maxlength="7" placeholder="#000000">
+            <select id="pcMode" title="Modo de color"><option value="rgb">RGB</option><option value="hsb">HSB</option></select>
+          </div>
+          <div class="slider-row"><span id="pcL0">R</span> <input type="range" id="pcR" min="0" max="255"><span id="pcRv"></span></div>
+          <div class="slider-row"><span id="pcL1">G</span> <input type="range" id="pcG" min="0" max="255"><span id="pcGv"></span></div>
+          <div class="slider-row"><span id="pcL2">B</span> <input type="range" id="pcB" min="0" max="255"><span id="pcBv"></span></div>
+          <div id="pcSpectrum"></div>
+        </div>
+      </div>
+
+      <div class="panel" id="pSwatches">
+        <div class="panel-head">Muestras</div>
+        <div class="panel-body"><div id="swatchGrid"></div>
+          <div class="btn-group-label">Recientes</div><div id="recentGrid" class="sw-row"></div></div>
+        <div class="panel-foot">
+          <button id="swAdd" title="Nueva muestra con el color actual">＋</button>
+          <span style="color:#777;font-size:11px">Alt+clic en una muestra propia para borrarla</span>
+        </div>
+      </div>
+
+      <div class="panel" id="pStroke">
+        <div class="panel-head">Trazo</div>
+        <div class="panel-body grid2">
+          <label>Grosor</label><input type="number" id="psWidth" min="0" step="0.5">
+          <label>Extremo</label>
+          <select id="psCap"><option value="butt">Plano</option><option value="round">Redondo</option><option value="square">Proyectado</option></select>
+          <label>Esquina</label>
+          <select id="psJoin"><option value="miter">Inglete</option><option value="round">Redonda</option><option value="bevel">Biselada</option></select>
+          <label>Discontinua</label><input type="text" id="psDash" placeholder="ej. 4 2">
+          <label>Punta inicial</label><select id="psStart"></select>
+          <label>Punta final</label><select id="psEnd"></select>
+        </div>
+      </div>
+
+      <div class="panel collapsed" id="pGradient">
+        <div class="panel-head">Degradado</div>
+        <div class="panel-body">
+          <div class="grid2">
+            <label>Tipo</label><select id="pgType"><option value="linear">Lineal</option><option value="radial">Radial</option></select>
+            <label>Ángulo</label><input type="number" id="pgAngle" value="0" step="5">
+          </div>
+          <div id="pgBar" title="Clic para añadir una parada"></div>
+          <div id="pgStops"></div>
+          <div class="grid2" style="margin-top:8px">
+            <label>Color parada</label><input type="color" id="pgColor">
+            <label>Posición %</label><input type="number" id="pgPos" min="0" max="100">
+            <label>Opacidad %</label><input type="number" id="pgOp" min="0" max="100" value="100">
+          </div>
+          <div style="display:flex;gap:6px;margin-top:8px">
+            <button class="text-btn" id="pgApply">Aplicar al relleno</button>
+            <button class="text-btn" id="pgApplyS">Al trazo</button>
+            <button class="text-btn" id="pgDel" title="Eliminar parada">Quitar parada</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel collapsed" id="pTransp">
+        <div class="panel-head">Transparencia</div>
+        <div class="panel-body grid2">
+          <label>Modo de fusión</label>
+          <select id="ptBlend"><option value="normal">Normal</option><option value="multiply">Multiplicar</option><option value="screen">Trama</option>
+            <option value="overlay">Superponer</option><option value="darken">Oscurecer</option><option value="lighten">Aclarar</option>
+            <option value="color-dodge">Sobreexponer color</option><option value="color-burn">Subexponer color</option><option value="hard-light">Luz fuerte</option>
+            <option value="soft-light">Luz suave</option><option value="difference">Diferencia</option><option value="exclusion">Exclusión</option>
+            <option value="hue">Tono</option><option value="saturation">Saturación</option><option value="color">Color</option><option value="luminosity">Luminosidad</option></select>
+          <label>Opacidad objeto</label><input type="range" id="ptOpacity" min="0" max="100">
+          <label>Opacidad relleno</label><input type="range" id="ptFillOp" min="0" max="100">
+          <label>Opacidad trazo</label><input type="range" id="ptStrokeOp" min="0" max="100">
+        </div>
+      </div>
+
+      <div class="panel collapsed" id="pChar">
+        <div class="panel-head">Carácter</div>
+        <div class="panel-body grid2">
+          <label>Fuente</label><select id="pcFont"></select>
+          <label>Estilo</label><select id="pcStyle"><option value="normal|normal">Normal</option><option value="bold|normal">Negrita</option>
+            <option value="normal|italic">Cursiva</option><option value="bold|italic">Negrita cursiva</option></select>
+          <label>Tamaño (pt)</label><input type="number" id="pcSize" min="1">
+          <label>Interlineado (%)</label><input type="number" id="pcLead" min="50" step="5" value="120">
+          <label>Tracking (‰ em)</label><input type="number" id="pcTrack" step="10" value="0">
+          <label>Alineación</label><select id="pcAlign"><option value="start">Izquierda</option><option value="middle">Centro</option><option value="end">Derecha</option></select>
+        </div>
+      </div>
+
+      <div class="panel" id="pAlign">
+        <div class="panel-head">Alinear</div>
+        <div class="panel-body"><div id="alignBtns"></div></div>
+      </div>
+
+      <div class="panel" id="pPathfinder">
+        <div class="panel-head">Buscatrazos</div>
+        <div class="panel-body"><div id="pathfinderBtns"></div></div>
+      </div>
+
+      <div class="panel grow" id="pLayers">
+        <div class="panel-head">Capas</div>
+        <div class="panel-body"><div id="layerList"></div></div>
+        <div class="panel-foot">
+          <button id="lyNew" title="Nueva capa">＋</button>
+          <button id="lyDel" title="Eliminar capa">🗑</button>
+          <span id="lyCount"></span>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <footer id="statusbar">
+    <span id="sbZoom">100%</span>
+    <span id="sbTool">Selección</span>
+    <span id="sbPos">0, 0</span>
+    <span id="sbHint"></span>
+  </footer>
+</div>
+
+<input type="file" id="fileInput" hidden>
+<div id="menuPopup" class="menu-popup" hidden></div>
+
+<script src="js/core.js"></script>
+<script src="js/units.js"></script>
+<script src="js/geometry.js"></script>
+<script src="js/selection.js"></script>
+<script src="js/tools.js"></script>
+<script src="js/pentools.js"></script>
+<script src="js/nodetools.js"></script>
+<script src="js/actions.js"></script>
+<script src="js/pathfinder.js"></script>
+<script src="js/pathops.js"></script>
+<script src="js/dialogs.js"></script>
+<script src="js/guides.js"></script>
+<script src="js/panels.js"></script>
+<script src="js/panels2.js"></script>
+<script src="js/menus.js"></script>
+<script src="js/newdoc.js"></script>
+<script src="js/files.js"></script>
+<script src="js/exporter.js"></script>
+<script src="js/importer.js"></script>
+<script src="js/app.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

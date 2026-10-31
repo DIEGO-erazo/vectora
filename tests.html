@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pruebas de Vectora</title>
+<style>
+  body{font:13px/1.4 "Segoe UI",system-ui,sans-serif;background:#1e1e1e;color:#ddd;margin:24px}
+  h1{font-size:18px;margin:0 0 4px}
+  #sum{margin:0 0 16px;color:#aaa}
+  table{border-collapse:collapse;width:100%;max-width:900px}
+  td{padding:4px 8px;border-bottom:1px solid #333;vertical-align:top}
+  .ok{color:#5fd38d}.fail{color:#ff6b6b}
+  td.d{color:#999;font-family:Consolas,monospace;font-size:12px}
+  svg{position:absolute;left:-9999px}
+</style>
+</head>
+<body>
+<h1>Pruebas de Vectora</h1>
+<p id="sum">Ejecutando…</p>
+<table id="out"></table>
+<svg id="stage" xmlns="http://www.w3.org/2000/svg" width="800" height="600"><g id="viewport"><g id="content"><g class="layer" id="L1"></g></g></g><g id="overlay"></g></svg>
+
+<script src="js/core.js"></script>
+<script src="js/units.js"></script>
+<script src="js/geometry.js"></script>
+<script src="js/selection.js"></script>
+<script src="js/pentools.js"></script>
+<script src="js/actions.js"></script>
+<script src="js/pathfinder.js"></script>
+<script src="js/pathops.js"></script>
+<script src="js/menus.js"></script>
+<script>
+'use strict';
+Object.assign(App.els, { stage: $('stage'), viewport: $('viewport'), content: $('content'), overlay: $('overlay') });
+const layer = $('L1');
+const results = [];
+function test(name, fn) {
+  try { const d = fn(); results.push({ name, ok: true, d: d == null ? '' : String(d) }); }
+  catch (e) { results.push({ name, ok: false, d: e.message }); }
+}
+function eq(a, b, msg) { if (a !== b) throw new Error(`${msg || ''} esperado ${JSON.stringify(b)}, obtenido ${JSON.stringify(a)}`); }
+function near(a, b, tol, msg) { if (!(Math.abs(a - b) <= tol)) throw new Error(`${msg || ''} esperado ≈${b}, obtenido ${a}`); return `${round(a, 3)} ≈ ${round(b, 3)}`; }
+function shoelace(pts) { let s = 0; for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) s += (pts[j].x + pts[i].x) * (pts[j].y - pts[i].y); return s / 2; }
+/* área firmada total (los agujeros restan), muestreando finamente cada curva */
+function areaOfSubs(subs) {
+  return Math.abs(subs.reduce((n, s) => {
+    const pts = [];
+    s.nodes.forEach((a, i) => { const b = s.nodes[(i + 1) % s.nodes.length]; for (let k = 0; k < 400; k++) pts.push(bez(a, b, k / 400)); });
+    return n + shoelace(pts);
+  }, 0));
+}
+const square = (x, y, s) => Boolean2D.fromSubs(PathData.parse(`M${x} ${y}L${x + s} ${y}L${x + s} ${y + s}L${x} ${y + s}Z`));
+const circle = (cx, cy, r) => Boolean2D.fromSubs(PathData.parse(PathData.fromShape(svgEl('circle', { cx, cy, r }))));
+const opArea = (A, B, k) => areaOfSubs(Boolean2D.toSubs(Boolean2D.op(A, B, k)));
+
+/* ---------- PathData ---------- */
+test('Ida y vuelta de un trazado absoluto', () => {
+  const d = 'M10 10L20 20C30 30 40 40 50 50Z', s = PathData.parse(d);
+  eq(PathData.serialize(s), 'M10 10L20 20C30 30 40 40 50 50Z'); return PathData.serialize(s);
+});
+test('Comandos relativos y H/V', () => {
+  const s = PathData.parse('m10 10l10 0v10h-10z');
+  eq(s[0].nodes.length, 4, 'nodos'); eq(s[0].closed, true, 'cerrado'); eq(s[0].nodes[2].x, 20); eq(s[0].nodes[2].y, 20);
+});
+test('Arco convertido a curvas', () => {
+  const s = PathData.parse('M0 0A10 10 0 0 1 20 0'), n = s[0].nodes, last = n[n.length - 1];
+  near(last.x, 20, 1e-6, 'x final'); near(last.y, 0, 1e-6, 'y final');
+  const p = svgEl('path', { d: PathData.serialize(s) }, layer), h = p.getBBox().height; p.remove();
+  return near(h, 10, 0.05, 'altura del semicírculo');
+});
+test('Cuadráticas Q/T', () => {
+  const s = PathData.parse('M0 0Q10 10 20 0T40 0'); eq(s[0].nodes.length, 3); eq(!!s[0].nodes[1].hin, true, 'tiene manejadores');
+});
+
+/* ---------- Buscatrazos ---------- */
+test('Unificar dos cuadrados (área 150)', () => near(opArea(square(0, 0, 10), square(5, 0, 10), 'union'), 150, 1e-6));
+test('Intersecar dos cuadrados (área 50)', () => near(opArea(square(0, 0, 10), square(5, 0, 10), 'intersect'), 50, 1e-6));
+test('Menos frente (área 50)', () => near(opArea(square(0, 0, 10), square(5, 0, 10), 'difference'), 50, 1e-6));
+test('Excluir (área 100)', () => near(opArea(square(0, 0, 10), square(5, 0, 10), 'xor'), 100, 1e-6));
+test('Cuadrado con agujero (área 64)', () => near(opArea(square(0, 0, 10), square(3, 3, 6), 'difference'), 64, 1e-6));
+test('Cuadrados separados (área 200)', () => near(opArea(square(0, 0, 10), square(20, 0, 10), 'union'), 200, 1e-6));
+test('Unificar dos círculos (área analítica)', () => {
+  const r = 10, d = 10, lens = 2 * r * r * Math.acos(d / (2 * r)) - (d / 2) * Math.sqrt(4 * r * r - d * d);
+  return near(opArea(circle(0, 0, r), circle(d, 0, r), 'union'), 2 * Math.PI * r * r - lens, 1.5);
+});
+test('Unificar círculos conserva las curvas', () => {
+  const d = Boolean2D.toPath(Boolean2D.op(circle(0, 0, 10), circle(10, 0, 10), 'union'));
+  const c = (d.match(/C/g) || []).length, l = (d.match(/L/g) || []).length;
+  if (c < 4 || c > 12 || l > 0) throw new Error(`C=${c} L=${l}`); return `C=${c}, L=${l}`;
+});
+test('Intersección de círculos (lente)', () => {
+  const r = 10, d = 10, lens = 2 * r * r * Math.acos(d / (2 * r)) - (d / 2) * Math.sqrt(4 * r * r - d * d);
+  return near(opArea(circle(0, 0, r), circle(d, 0, r), 'intersect'), lens, 1);
+});
+
+/* ---------- Operaciones de trazado ---------- */
+test('Contornear trazo de una línea (100×10)', () => {
+  const sp = strokePolygon([{ pts: [{ x: 0, y: 0 }, { x: 100, y: 0 }], closed: false }], 5, 'miter', 'butt');
+  return near(areaOfSubs(Boolean2D.toSubs(Boolean2D.op(sp, { rings: [], rule: 'nonzero' }, 'union'))), 1000, 1e-6);
+});
+test('Contornear trazo con extremos proyectados (110×10)', () => {
+  const sp = strokePolygon([{ pts: [{ x: 0, y: 0 }, { x: 100, y: 0 }], closed: false }], 5, 'miter', 'square');
+  return near(areaOfSubs(Boolean2D.toSubs(Boolean2D.op(sp, { rings: [], rule: 'nonzero' }, 'union'))), 1100, 1e-6);
+});
+test('Desplazar +10 con inglete (120²)', () => {
+  const base = square(0, 0, 100), band = strokePolygon(base.rings.map(r => ({ pts: r, closed: true })), 10, 'miter', 'butt', 8);
+  return near(opArea(base, band, 'union'), 14400, 1e-6);
+});
+test('Desplazar −10 (80²)', () => {
+  const base = square(0, 0, 100), band = strokePolygon(base.rings.map(r => ({ pts: r, closed: true })), 10, 'miter', 'butt', 8);
+  return near(opArea(base, band, 'difference'), 6400, 1e-6);
+});
+test('Desplazar +10 redondeado (≈14314)', () => {
+  const base = square(0, 0, 100), band = strokePolygon(base.rings.map(r => ({ pts: r, closed: true })), 10, 'round', 'butt');
+  return near(opArea(base, band, 'union'), 10000 + 4000 + Math.PI * 100, 5);
+});
+test('Simplificar una recta de 100 puntos', () => {
+  const pts = Array.from({ length: 100 }, (_, i) => ({ x: i, y: 2 * i })); eq(rdp(pts, 0.5).length, 2);
+});
+
+/* ---------- Transformaciones ---------- */
+test('normalizeTransform lleva la escala a la geometría', () => {
+  const r = svgEl('rect', { x: 10, y: 10, width: 20, height: 10, transform: 'matrix(2 0 0 2 5 5)' }, layer);
+  normalizeTransform(r); const out = [r.getAttribute('x'), r.getAttribute('y'), r.getAttribute('width'), r.getAttribute('height'), r.getAttribute('transform')];
+  r.remove(); eq(out.join(','), '25,25,40,20,'); return out.join(', ');
+});
+test('normalizeTransform en un trazado', () => {
+  const p = svgEl('path', { d: 'M0 0L10 0', transform: 'translate(5 7)' }, layer);
+  normalizeTransform(p); const d = p.getAttribute('d'); p.remove(); eq(d, 'M5 7L15 7'); return d;
+});
+test('Convertir rectángulo redondeado en trazado', () => {
+  const r = svgEl('rect', { x: 0, y: 0, width: 100, height: 50, rx: 10, fill: 'red' }, layer), p = PathData.convert(r);
+  const b = p.getBBox(), out = [p.tagName, p.getAttribute('fill'), round(b.width), round(b.height)]; p.remove();
+  eq(out.join(','), 'path,red,100,50'); return out.join(', ');
+});
+
+/* ---------- Importación e historial ---------- */
+test('El CSS importado se convierte en atributos', () => {
+  const svg = new DOMParser().parseFromString('<svg xmlns="http://www.w3.org/2000/svg"><style>.a{fill:#00ff00}</style><rect class="a" style="stroke:blue;cursor:pointer"/></svg>', 'image/svg+xml').documentElement;
+  IO.sanitize(svg); const r = svg.querySelector('rect');
+  eq(svg.querySelector('style'), null, 'sin <style>'); eq(r.getAttribute('stroke'), 'blue'); eq(r.getAttribute('style'), 'cursor:pointer');
+  return `fill=${r.getAttribute('fill')}`;
+});
+test('Se eliminan scripts y manejadores de eventos', () => {
+  const svg = new DOMParser().parseFromString('<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)<\/script><a href="javascript:alert(1)"><rect onclick="x()"/></a></svg>', 'image/svg+xml').documentElement;
+  IO.sanitize(svg); eq(svg.querySelector('script'), null); eq(svg.querySelector('rect').hasAttribute('onclick'), false); eq(svg.querySelector('a').hasAttribute('href'), false);
+});
+test('Registro de imágenes: empaquetar y desempaquetar', () => {
+  const url = 'data:image/png;base64,' + 'Q'.repeat(1000), html = `<image href="${url}"/><image href="${url}"/>`;
+  const packed = ImageStore.pack(html); if (packed.length > 100) throw new Error('no se compactó');
+  eq(ImageStore.unpack(packed), html); return `${html.length} → ${packed.length} caracteres`;
+});
+
+const out = $('out'); let pass = 0;
+for (const r of results) {
+  if (r.ok) pass++;
+  out.insertAdjacentHTML('beforeend', `<tr><td class="${r.ok ? 'ok' : 'fail'}">${r.ok ? '✔' : '✘'}</td><td>${r.name}</td><td class="d">${r.d.replace(/</g, '&lt;')}</td></tr>`);
+}
+$('sum').innerHTML = `<b class="${pass === results.length ? 'ok' : 'fail'}">${pass} / ${results.length}</b> pruebas superadas`;
+window.testResults = { pass, total: results.length, failed: results.filter(r => !r.ok) };
+</script>
+</body>
+</html>

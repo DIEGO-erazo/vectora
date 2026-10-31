@@ -1,0 +1,372 @@
+/* Vectora — menús, atajos de teclado y archivo (abrir / guardar / exportar) */
+'use strict';
+
+const IO = {
+  async newDoc(w = 800, h = 600, ask = true) {
+    let title = 'Sin título-' + (IO.count + 1), units = 'px', bleed = 0;
+    if (ask) {
+      const v = await NewDoc.open('new'); if (!v) return;
+      ({ width: w, height: h, units, bleed } = v); title = v.name;
+    }
+    IO.count++; IO.current = null;
+    App.els.content.innerHTML = ''; App.activeLayer = null; App.selection = [];
+    Object.assign(App.doc, { width: w, height: h, title, units, bleed, guides: [], swatches: [] });
+    Layers.create('Capa 1'); View.updateArtboard(); View.fit(); History.reset(); Selection.changed();
+  },
+  count: 1,
+  sanitize(root) {
+    root.querySelectorAll('script,foreignObject,iframe').forEach(e => e.remove());
+    for (const e of [root, ...root.querySelectorAll('*')]) for (const a of [...e.attributes]) {
+      if (/^on/i.test(a.name)) e.removeAttribute(a.name);
+      if (/href$/i.test(a.name) && /^\s*javascript:/i.test(a.value)) e.removeAttribute(a.name);
+    }
+    this.inlineCSS(root);
+  },
+  /* Convierte las hojas <style> y los atributos style="" en atributos de presentación,
+     para que el CSS importado no afecte a la interfaz y los colores sean editables. */
+  PRES: new Set(['fill', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin', 'stroke-dasharray', 'stroke-dashoffset', 'stroke-miterlimit',
+    'opacity', 'fill-opacity', 'stroke-opacity', 'fill-rule', 'clip-rule', 'clip-path', 'mask', 'filter', 'font-family', 'font-size', 'font-weight',
+    'font-style', 'text-anchor', 'letter-spacing', 'display', 'visibility', 'stop-color', 'stop-opacity']),
+  inlineCSS(root) {
+    for (const st of [...root.querySelectorAll('style')]) {
+      try {
+        const sheet = new CSSStyleSheet(); sheet.replaceSync(st.textContent);
+        for (const r of sheet.cssRules) {
+          if (!r.selectorText) continue;
+          let els; try { els = root.querySelectorAll(r.selectorText); } catch (e) { continue; }
+          els.forEach(e => { for (const p of r.style) if (this.PRES.has(p)) e.setAttribute(p, r.style.getPropertyValue(p)); });
+        }
+        /* solo se conservan las fuentes incrustadas (@font-face), que no afectan a la interfaz */
+        const fonts = [...sheet.cssRules].filter(r => r instanceof CSSFontFaceRule).map(r => r.cssText);
+        if (fonts.length) { st.textContent = fonts.join('\n'); continue; }
+      } catch (e) { /* CSS no válido: se ignora */ }
+      st.remove();
+    }
+    for (const e of root.querySelectorAll('[style]')) {
+      const decl = e.getAttribute('style').split(';');
+      const keep = [];
+      for (const d of decl) {
+        const i = d.indexOf(':'); if (i < 0) continue;
+        const p = d.slice(0, i).trim().toLowerCase(), v = d.slice(i + 1).replace(/!important/i, '').trim();
+        if (this.PRES.has(p)) e.setAttribute(p, v); else if (p) keep.push(`${p}:${v}`);
+      }
+      keep.length ? e.setAttribute('style', keep.join(';')) : e.removeAttribute('style');
+    }
+  },
+  /* elimina de <defs> lo que nadie referencia (gradientes, filtros, máscaras huérfanas) */
+  purgeDefs(svg) {
+    for (let pass = 0; pass < 4; pass++) {
+      const text = new XMLSerializer().serializeToString(svg);
+      const used = new Set([...text.matchAll(/url\(\s*['"]?#([^)'"\s]+)/g), ...text.matchAll(/href="#([^"]+)"/g)].map(m => m[1]));
+      let removed = 0;
+      for (const d of svg.querySelectorAll('defs > [id]')) if (!used.has(d.id)) { d.remove(); removed++; }
+      if (!removed) break;
+    }
+    svg.querySelectorAll('defs').forEach(d => { if (!d.children.length) d.remove(); });
+  },
+  loadSVG(text, name) {
+    const doc = new DOMParser().parseFromString(text, 'image/svg+xml'), svg = doc.documentElement;
+    if (svg.tagName !== 'svg') return Dialog.alert('El archivo no es un SVG válido.');
+    this.sanitize(svg);
+    const vb = (svg.getAttribute('viewBox') || '').split(/[\s,]+/).map(Number);
+    let w = parseFloat(svg.getAttribute('width')), h = parseFloat(svg.getAttribute('height'));
+    if (vb.length === 4) { w = vb[2]; h = vb[3]; }
+    w = w || 800; h = h || 600;
+    let meta = {}; try { const m = svg.querySelector('metadata#vectora-meta'); if (m) meta = JSON.parse(m.textContent); } catch (e) { meta = {}; }
+    const c = App.els.content; c.innerHTML = ''; App.activeLayer = null; App.selection = [];
+    const defs = svgEl('defs', {}, c);
+    const kids = [...svg.children].map(n => document.importNode(n, true));
+    const own = kids.some(k => k.classList && k.classList.contains('layer'));
+    let layer = null;
+    for (const k of kids) {
+      if (k.tagName === 'defs') { [...k.children].forEach(d => defs.appendChild(d)); continue; }
+      if (k.tagName === 'style') { defs.appendChild(k); continue; }
+      if (['title', 'desc', 'metadata'].includes(k.tagName)) continue;
+      if (own && k.classList.contains('layer')) { c.appendChild(k); continue; }
+      if (!layer) layer = Layers.create('Capa 1');
+      layer.appendChild(k);
+    }
+    /* contenido de capa en la posición del viewBox */
+    if (vb.length === 4 && (vb[0] || vb[1])) for (const l of Layers.all()) for (const o of [...l.children]) Geo.applyDoc(o, new DOMMatrix().translate(-vb[0], -vb[1]));
+    for (const e of c.querySelectorAll('.layer > *')) if (!e.id) e.id = uid();
+    Object.assign(App.doc, { width: w, height: h, title: (name || 'Importado').replace(/\.svg$/i, ''),
+      swatches: Array.isArray(meta.swatches) ? meta.swatches.filter(s => /^#[0-9a-f]{6}$/i.test(s)) : [],
+      guides: Array.isArray(meta.guides) ? meta.guides.filter(g => g && (g.axis === 'x' || g.axis === 'y') && isFinite(g.v)) : [],
+      units: Units.list[meta.units] ? meta.units : 'px', bleed: isFinite(meta.bleed) ? Math.max(0, +meta.bleed) : 0 });
+    Layers.ensure(); View.updateArtboard(); View.fit(); History.reset(); Selection.changed(); App.emit('layers');
+  },
+  /* box: área exportada (por defecto la mesa de trabajo); only: exportar solo esos objetos */
+  serialize(forExport = true, box = null, only = null) {
+    return '<?xml version="1.0" encoding="UTF-8"?>\n<!-- Creado con Vectora (editor vectorial libre) -->\n' + new XMLSerializer().serializeToString(this.buildSVG(forExport, box, only));
+  },
+  buildSVG(forExport = true, box = null, only = null) {
+    const d = App.doc, b = box || { x: 0, y: 0, width: d.width, height: d.height };
+    const svg = svgEl('svg', { xmlns: NS, width: round(b.width), height: round(b.height), viewBox: `${round(b.x)} ${round(b.y)} ${round(b.width)} ${round(b.height)}` });
+    svg.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+    if (only) only.forEach(e => e.setAttribute('data-exp', '1'));
+    for (const ch of App.els.content.children) {
+      const c = ch.cloneNode(true);
+      if (forExport) c.querySelectorAll('[opacity="0"]').forEach(e => { if (e.tagName === 'text') e.removeAttribute('opacity'); });
+      if (only && c.classList.contains('layer')) [...c.children].forEach(o => { if (!o.hasAttribute('data-exp')) o.remove(); });
+      c.querySelectorAll('[data-exp]').forEach(e => e.removeAttribute('data-exp'));
+      svg.appendChild(c);
+    }
+    if (only) only.forEach(e => e.removeAttribute('data-exp'));
+    if (forExport) this.purgeDefs(svg);
+    /* muestras propias y guías viajan dentro del SVG */
+    const meta = {}; if ((d.swatches || []).length) meta.swatches = d.swatches; if ((d.guides || []).length) meta.guides = d.guides;
+    if (d.units && d.units !== 'px') meta.units = d.units; if (d.bleed) meta.bleed = d.bleed;
+    if (!only && Object.keys(meta).length) svg.prepend(Object.assign(svgEl('metadata', { id: 'vectora-meta' }), { textContent: JSON.stringify(meta) }));
+    return svg;
+  },
+  download(blob, name) {
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  },
+  rasterize(svgText, w, h, scale, bg, type, quality = 0.92) {
+    return new Promise((res, rej) => {
+      const img = new Image(), url = URL.createObjectURL(new Blob([svgText], { type: 'image/svg+xml' }));
+      img.onload = () => {
+        const cv = document.createElement('canvas'); cv.width = Math.max(1, Math.round(w * scale)); cv.height = Math.max(1, Math.round(h * scale));
+        const ctx = cv.getContext('2d');
+        if (bg) { ctx.fillStyle = bg; ctx.fillRect(0, 0, cv.width, cv.height); }
+        ctx.drawImage(img, 0, 0, cv.width, cv.height); URL.revokeObjectURL(url);
+        cv.toBlob(b => b ? res(b) : rej(new Error('canvas')), type, quality);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('img')); };
+      img.src = url;
+    });
+  },
+  printPDF(svgText, w, h) {
+    const win = window.open('', '_blank');
+    if (!win) return Dialog.alert('El navegador bloqueó la ventana emergente. Permítela para exportar a PDF.');
+    const body = svgText.replace(/^<\?xml[^>]*>\s*/, '');
+    win.document.write(`<!doctype html><html><head><title>${App.doc.title}</title><style>@page{size:${w}px ${h}px;margin:0}
+      html,body{margin:0;background:#fff}svg{display:block;width:100%;height:auto}</style></head><body>${body}</body></html>`);
+    win.document.close();
+    setTimeout(() => { win.focus(); win.print(); }, 400);
+  },
+  placeSVG(text) {
+    const svg = new DOMParser().parseFromString(text, 'image/svg+xml').documentElement; if (svg.tagName !== 'svg') return;
+    this.sanitize(svg);
+    const g = svgEl('g', { id: uid(), 'data-name': '<SVG colocado>' });
+    for (const k of [...svg.children]) {
+      const n = document.importNode(k, true);
+      if (n.tagName === 'defs') [...n.children].forEach(d => docDefs().appendChild(d)); else if (!['title', 'desc', 'metadata'].includes(n.tagName)) g.appendChild(n);
+    }
+    if (addObject(g)) { Selection.set([g]); History.commit(); }
+  },
+  /* autoguardado en IndexedDB (cientos de MB, frente a los ~5 MB de localStorage) */
+  async autosave() {
+    try {
+      const html = ImageStore.pack(App.els.content.innerHTML);
+      const images = ImageStore.used(html).map(id => [id, ImageStore.byId.get(id)]);
+      await KV.set('autosave', { doc: App.doc, html, images });
+      if ($('sbHint').dataset.warn) { $('sbHint').textContent = ''; delete $('sbHint').dataset.warn; }
+    } catch (e) {
+      $('sbHint').textContent = '⚠ No se pudo autoguardar: guarda tu trabajo como SVG'; $('sbHint').dataset.warn = '1';
+    }
+  },
+  async restore() {
+    try {
+      let s = await KV.get('autosave');
+      if (!s) { try { s = JSON.parse(localStorage.getItem('vectora-autosave') || 'null'); localStorage.removeItem('vectora-autosave'); } catch (e) { s = null; } }
+      if (!s || !s.html) return false;
+      for (const [id, url] of s.images || []) {
+        ImageStore.byId.set(id, url); ImageStore.byUrl.set(url, id);
+        ImageStore.n = Math.max(ImageStore.n, +id.slice(4) + 1);
+      }
+      App.els.content.innerHTML = ImageStore.unpack(s.html); Object.assign(App.doc, s.doc); return true;
+    } catch (e) { return false; }
+  },
+};
+
+/* almacén clave-valor mínimo sobre IndexedDB */
+const KV = {
+  db() {
+    return this._db ||= new Promise((res, rej) => {
+      const r = indexedDB.open('vectora', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('kv');
+      r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+    });
+  },
+  async get(k) {
+    const db = await this.db();
+    return new Promise((res, rej) => { const r = db.transaction('kv').objectStore('kv').get(k); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+  },
+  async set(k, v) {
+    const db = await this.db();
+    return new Promise((res, rej) => { const t = db.transaction('kv', 'readwrite'); t.objectStore('kv').put(v, k); t.oncomplete = () => res(); t.onerror = () => rej(t.error); });
+  },
+};
+
+/* ---------- Definición de menús ---------- */
+const MENUS = {
+  'Archivo': [
+    ['Nuevo…', 'Ctrl+N', () => IO.newDoc()], ['Abrir…', 'Ctrl+O', () => Import.open()], '-',
+    ['Guardar', 'Ctrl+S', () => IO.save()], ['Guardar como…', 'Ctrl+Shift+S', () => IO.saveAs()], '-',
+    ['Colocar…', 'Ctrl+Shift+P', () => Import.place()], '-',
+    ['Exportar ▸ Exportar como…', 'Ctrl+Shift+E', () => Export.dialog()],
+    ['Exportar ▸ Exportar para pantallas…', 'Ctrl+Alt+E', () => Export.screens()],
+    ['Exportar ▸ PDF…', 'Ctrl+Alt+Shift+S', () => Export.dialog('pdf')], '-',
+    ['Ajustar documento…', 'Ctrl+Alt+P', () => NewDoc.setup()], ['Mesa de trabajo', 'Shift+O', () => Tools.use('artboard')], '-',
+    ['Imprimir…', 'Ctrl+P', () => { const { box } = Export.area('doc'); IO.printPDF(IO.serialize(true), box.width, box.height); }],
+    ...(window.vectoraDesktop ? ['-', ['Salir', 'Ctrl+Q', () => window.close()]] : []),
+  ],
+  'Edición': [
+    ['Deshacer', 'Ctrl+Z', () => History.undo()], ['Rehacer', 'Ctrl+Shift+Z', () => History.redo()], '-',
+    ['Cortar', 'Ctrl+X', () => Actions.cut()], ['Copiar', 'Ctrl+C', () => Actions.copy()], ['Pegar', 'Ctrl+V', () => Actions.paste()],
+    ['Pegar delante', 'Ctrl+F', () => Actions.paste('front')], ['Pegar detrás', 'Ctrl+B', () => Actions.paste('back')],
+    ['Borrar', 'Delete', () => Actions.del()], ['Duplicar', 'Ctrl+Alt+D', () => Actions.duplicate()], '-',
+    ['Ajustar a cuadrícula', 'Ctrl+Shift+\'', () => { App.snap = !App.snap; Menus.refreshChecks(); }, () => App.snap],
+  ],
+  'Objeto': [
+    ['Transformar ▸ Transformar de nuevo', 'Ctrl+D', () => PathOps.transformAgain()],
+    ['Transformar ▸ Mover…', 'Ctrl+Shift+M', () => Actions.moveDialog()], ['Transformar ▸ Rotar…', '', () => Actions.rotateDialog()],
+    ['Transformar ▸ Escalar…', '', () => Actions.scaleDialog()], ['Transformar ▸ Reflejar horizontal', '', () => Actions.reflect('h')],
+    ['Transformar ▸ Reflejar vertical', '', () => Actions.reflect('v')], '-',
+    ['Organizar ▸ Traer al frente', 'Ctrl+Shift+]', () => Actions.arrange('front')], ['Organizar ▸ Hacia delante', 'Ctrl+]', () => Actions.arrange('forward')],
+    ['Organizar ▸ Hacia atrás', 'Ctrl+[', () => Actions.arrange('backward')], ['Organizar ▸ Enviar al fondo', 'Ctrl+Shift+[', () => Actions.arrange('back')], '-',
+    ['Agrupar', 'Ctrl+G', () => Actions.group()], ['Desagrupar', 'Ctrl+Shift+G', () => Actions.ungroup()], '-',
+    ['Bloquear selección', 'Ctrl+2', () => Actions.lock()], ['Desbloquear todo', 'Ctrl+Alt+2', () => Actions.unlockAll()],
+    ['Ocultar selección', 'Ctrl+3', () => Actions.hide()], ['Mostrar todo', 'Ctrl+Alt+3', () => Actions.showAll()], '-',
+    ['Convertir en trazado', '', () => Actions.toPath()],
+    ['Trazado ▸ Unir', 'Ctrl+J', () => PathOps.join()], ['Trazado ▸ Simplificar…', '', () => PathOps.simplify()],
+    ['Trazado ▸ Contornear trazo', '', () => PathOps.outlineStroke()], ['Trazado ▸ Desplazar trazado…', '', () => PathOps.offsetPath()],
+    ['Trazado compuesto ▸ Crear', 'Ctrl+8', () => Pathfinder.compound()], ['Trazado compuesto ▸ Liberar', 'Ctrl+Alt+Shift+8', () => Pathfinder.release()],
+    ['Máscara de recorte ▸ Crear', 'Ctrl+7', () => Actions.makeClip()], ['Máscara de recorte ▸ Liberar', 'Ctrl+Alt+7', () => Actions.releaseClip()],
+  ],
+  'Seleccionar': [
+    ['Todo', 'Ctrl+A', () => Actions.selectAll()], ['Deseleccionar', 'Ctrl+Shift+A', () => Selection.clear()],
+    ['Invertir selección', '', () => Actions.invertSelection()], '-',
+    ['Mismo color de relleno', '', () => Actions.selectSame('fill')], ['Mismo color de trazo', '', () => Actions.selectSame('stroke')],
+    ['Mismo grosor de trazo', '', () => Actions.selectSame('stroke-width')],
+  ],
+  'Efecto': [
+    ['Sombra paralela…', '', () => Effects.shadow()], ['Desenfoque gaussiano…', '', () => Effects.blur()],
+    ['Quitar efectos', '', () => Effects.clear()],
+  ],
+  'Ver': [
+    ['Acercar', 'Ctrl+=', () => View.zoomAt(1.25)], ['Alejar', 'Ctrl+-', () => View.zoomAt(0.8)],
+    ['Encajar mesa de trabajo en ventana', 'Ctrl+0', () => View.fit()], ['Tamaño real', 'Ctrl+1', () => View.setZoom(1)], '-',
+    ['Contornear', 'Ctrl+Y', () => { App.els.content.classList.toggle('outline'); Menus.refreshChecks(); }, () => App.els.content.classList.contains('outline')],
+    ['Mostrar cuadrícula', 'Ctrl+\'', () => { Grid.toggle(); Menus.refreshChecks(); }, () => Grid.on], '-',
+    ['Reglas', 'Ctrl+R', () => Rulers.toggle(), () => Rulers.on],
+    ['Guías inteligentes', 'Ctrl+U', () => { SmartGuides.on = !SmartGuides.on; }, () => SmartGuides.on],
+    ['Borrar guías', '', () => Guides.clear()],
+  ],
+  'Ventana': [
+    ['Color', '', () => Menus.togglePanel('pColor')], ['Muestras', '', () => Menus.togglePanel('pSwatches')], ['Trazo', '', () => Menus.togglePanel('pStroke')],
+    ['Degradado', '', () => Menus.togglePanel('pGradient')], ['Transparencia', '', () => Menus.togglePanel('pTransp')], ['Carácter', '', () => Menus.togglePanel('pChar')],
+    ['Alinear', '', () => Menus.togglePanel('pAlign')], ['Buscatrazos', '', () => Menus.togglePanel('pPathfinder')], ['Capas', '', () => Menus.togglePanel('pLayers')],
+  ],
+  'Ayuda': [
+    ['Atajos de teclado', 'F1', () => Dialog.alert(HELP_TEXT, 'Atajos de teclado')], '-',
+    ...(window.vectoraDesktop ? [] : [['Instalar como aplicación…', '', () => Shell.install()],
+      ['Descargar programa de escritorio', '', () => Shell.openRepo('/releases/latest')]]),
+    ['Código fuente en GitHub', '', () => Shell.openRepo()], ['Informar de un problema', '', () => Shell.openRepo('/issues/new/choose')], '-',
+    ['Acerca de Vectora', '', () => Dialog.alert(`Vectora ${APP_INFO.version}\nEditor de gráficos vectoriales libre y de código abierto (licencia MIT).\n\n${APP_INFO.repo}`)],
+  ],
+};
+const HELP_TEXT = `HERRAMIENTAS
+V Selección · A Selección directa · P Pluma · N Lápiz · T Texto · \\ Línea
+M Rectángulo · L Elipse · R Rotar · S Escala · I Cuentagotas · G Degradado
+Mayús+E Borrador · Mayús+O Mesa de trabajo · H Mano (o mantén Espacio) · Z Zoom
+
+COLOR
+X alternar relleno/trazo · Mayús+X intercambiar · D por defecto · / ninguno
+
+MODIFICADORES
+Mayús: proporción / 45° · Alt: desde el centro / duplicar al arrastrar
+Flechas: mover 1 px (Mayús: 10 px) · Rueda: desplazar · Ctrl+Rueda: zoom
+Selección directa: doble clic en un segmento añade un punto · Alt+clic en un punto lo convierte en esquina
+Pluma: clic = esquina, arrastrar = curva, clic en el primer punto = cerrar, Intro/Esc = terminar`;
+
+const Effects = {
+  ensure(el) {
+    let id = (el.getAttribute('filter') || '').match(/#([^)]+)/); id = id && id[1];
+    let f = id && document.getElementById(id);
+    if (!f) { f = svgEl('filter', { id: uid('fx'), x: '-50%', y: '-50%', width: '200%', height: '200%' }, docDefs()); el.setAttribute('filter', `url(#${f.id})`); }
+    return f;
+  },
+  shadow() {
+    Dialog.edit('Sombra paralela', [
+      { id: 'dx', label: 'Desplazamiento X', type: 'number', value: 4 }, { id: 'dy', label: 'Desplazamiento Y', type: 'number', value: 4 },
+      { id: 'b', label: 'Desenfoque', type: 'number', value: 3, min: 0, step: 0.5 }, { id: 'o', label: 'Opacidad (%)', type: 'number', value: 50, min: 0, max: 100 },
+      { id: 'c', label: 'Color', type: 'color', value: '#000000' },
+    ], v => App.selection.forEach(el => { const f = this.ensure(el); f.innerHTML = '';
+      svgEl('feDropShadow', { dx: +v.dx || 0, dy: +v.dy || 0, stdDeviation: +v.b || 0, 'flood-color': v.c, 'flood-opacity': clamp(+v.o, 0, 100) / 100 }, f); }));
+  },
+  blur() {
+    Dialog.edit('Desenfoque gaussiano', [{ id: 'r', label: 'Radio', type: 'number', value: 4, min: 0, step: 0.5 }],
+      v => App.selection.forEach(el => { const f = this.ensure(el); f.innerHTML = ''; svgEl('feGaussianBlur', { stdDeviation: +v.r || 0 }, f); }));
+  },
+  clear() { App.selection.forEach(el => el.removeAttribute('filter')); History.commit(); },
+};
+
+const Grid = {
+  on: false,
+  toggle() {
+    this.on = !this.on;
+    let r = $('gridRect');
+    if (!r) {
+      const p = svgEl('pattern', { id: 'gridPat', width: App.gridSize, height: App.gridSize, patternUnits: 'userSpaceOnUse' }, $('stageDefs'));
+      svgEl('path', { d: `M${App.gridSize} 0H0V${App.gridSize}`, fill: 'none', stroke: '#c8d4ff', 'stroke-width': .5 }, p);
+      r = svgEl('rect', { id: 'gridRect', fill: 'url(#gridPat)', 'pointer-events': 'none' }); App.els.content.before(r);
+    }
+    r.setAttribute('width', App.doc.width); r.setAttribute('height', App.doc.height);
+    r.style.display = this.on ? '' : 'none';
+  },
+};
+
+const Menus = {
+  shortcuts: [],
+  build() {
+    const bar = $('menus'), pop = $('menuPopup');
+    for (const name in MENUS) {
+      const b = document.createElement('div'); b.className = 'menu-btn'; b.textContent = name; bar.appendChild(b);
+      b.onmousedown = e => { e.stopPropagation(); this.openMenu === name ? this.close() : this.show(name, b); };
+      b.onmouseenter = () => { if (this.openMenu && this.openMenu !== name) this.show(name, b); };
+      for (const it of MENUS[name]) if (it !== '-' && it[1]) this.shortcuts.push({ combo: this.parse(it[1]), fn: it[2] });
+    }
+    document.addEventListener('mousedown', e => { if (!pop.contains(e.target)) this.close(); });
+  },
+  show(name, btn) {
+    const pop = $('menuPopup'); this.openMenu = name;
+    document.querySelectorAll('.menu-btn').forEach(m => m.classList.toggle('open', m === btn));
+    pop.innerHTML = '';
+    for (const it of MENUS[name]) {
+      if (it === '-') { pop.insertAdjacentHTML('beforeend', '<div class="menu-sep"></div>'); continue; }
+      const [label, key, fn, check] = it, row = document.createElement('div'); row.className = 'menu-item';
+      row.innerHTML = `<span>${check && check() ? '✓ ' : ''}${label}</span><span class="kbd">${key.replace('Delete', 'Supr')}</span>`;
+      row.onclick = () => { this.close(); fn(); };
+      pop.appendChild(row);
+    }
+    const r = btn.getBoundingClientRect(); pop.style.left = r.left + 'px'; pop.style.top = r.bottom + 'px'; pop.hidden = false;
+  },
+  close() { this.openMenu = null; $('menuPopup').hidden = true; document.querySelectorAll('.menu-btn').forEach(m => m.classList.remove('open')); },
+  refreshChecks() { /* las marcas se recalculan al abrir el menú */ },
+  togglePanel(id) {
+    const p = $(id), hidden = p.style.display === 'none', collapsed = p.classList.contains('collapsed');
+    if (hidden || collapsed) { p.style.display = ''; p.classList.remove('collapsed'); p.scrollIntoView({ block: 'nearest' }); }
+    else p.style.display = 'none';
+  },
+  parse(s) {
+    const parts = s.split('+'), key = parts.pop();
+    return { ctrl: parts.includes('Ctrl'), shift: parts.includes('Shift'), alt: parts.includes('Alt'), key: key.toLowerCase() };
+  },
+  match(ev) {
+    const k = ev.key.toLowerCase(), code = ev.code;
+    for (const s of this.shortcuts) {
+      const c = s.combo;
+      if (c.ctrl !== (ev.ctrlKey || ev.metaKey) || c.alt !== ev.altKey) continue;
+      const keyOk = k === c.key || (c.key === '=' && (k === '+' || code === 'Equal' || code === 'NumpadAdd')) || (c.key === '-' && code === 'NumpadSubtract')
+        || (c.key === ']' && code === 'BracketRight') || (c.key === '[' && code === 'BracketLeft') || (c.key === "'" && code === 'Quote')
+        || (/^\d$/.test(c.key) && code === 'Digit' + c.key);
+      if (!keyOk) continue;
+      if (c.shift !== ev.shiftKey && !(c.key === '=' && k === '+')) continue;
+      return s.fn;
+    }
+    return null;
+  },
+};
