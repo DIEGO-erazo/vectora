@@ -19,6 +19,7 @@ const Prefs = {
   async dialog() {
     const v = await Dialog.form('Preferencias', [
       { id: 'h1', type: 'heading', label: 'Interfaz' },
+      { id: 'lang', label: 'Idioma / Language', type: 'select', value: Lang.cur, options: [['es', 'Español'], ['en', 'English']] },
       { id: 'theme', label: 'Brillo', type: 'select', value: this.get('theme'), options: [['dark', 'Oscuro'], ['mediumdark', 'Medio oscuro'], ['mediumlight', 'Medio claro'], ['light', 'Claro']] },
       { id: 'taskbar', label: 'Barra de tareas contextual', type: 'checkbox', value: this.get('taskbar') },
       { id: 'home', label: 'Pantalla de inicio al abrir', type: 'checkbox', value: this.get('home') },
@@ -33,6 +34,8 @@ const Prefs = {
     ], { preview: v => { document.documentElement.dataset.theme = v.theme; Rulers.draw(); }, revert: () => { document.documentElement.dataset.theme = this.get('theme'); Rulers.draw(); } });
     if (!v) return;
     for (const k of ['nudge', 'nudgeBig', 'undo', 'snapTol']) v[k] = +v[k] || this.defaults[k];
+    const lang = v.lang; delete v.lang;
     delete v._button; Object.assign(this.v, v); this.save(); this.apply();
+    if (lang !== Lang.cur && await Dialog.confirm(lang === 'en' ? 'Restart the interface in English now? (your work is kept by autosave)' : '¿Reiniciar la interfaz en español ahora? (el trabajo se conserva con el autoguardado)')) { IO.autosave(); Lang.set(lang); }
   },
 };
