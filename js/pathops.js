@@ -110,8 +110,7 @@ const PathOps = {
     const out = sel.map(el => {
       const subs = pathSubsDoc(el).map(s => {
         let pts = Boolean2D.flatten(s).map(p => ({ x: p.x, y: p.y }));
-        if (s.closed) pts.push(pts[0]);
-        pts = rdp(pts, +v.tol); if (s.closed) pts.pop();
+        pts = s.closed ? rdpClosed(pts, +v.tol) : rdp(pts, +v.tol);
         return { nodes: smoothNodes(pts, s.closed), closed: s.closed };
       });
       return replaceWithPath(el, subs, styleAttrs(el));

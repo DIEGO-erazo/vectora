@@ -23,34 +23,79 @@ const ICONS = {
   artboard: '<path d="M7 3v18M17 3v18M3 7h18M3 17h18"/>',
 };
 
-const TOOL_LIST = [
-  ['select', 'Selección', 'V'], ['direct', 'Selección directa', 'A'], '|',
-  ['pen', 'Pluma', 'P'], ['pencil', 'Lápiz', 'N'], ['text', 'Texto', 'T'], ['line', 'Segmento de línea', '\\'], '|',
-  ['rect', 'Rectángulo', 'M'], ['rrect', 'Rectángulo redondeado', ''], ['ellipse', 'Elipse', 'L'],
-  ['polygon', 'Polígono', ''], ['star', 'Estrella', ''], '|',
-  ['rotate', 'Rotar', 'R'], ['scale', 'Escala', 'S'], ['eraser', 'Borrador', 'Mayús+E'], ['eyedropper', 'Cuentagotas', 'I'], ['gradient', 'Degradado', 'G'], '|',
-  ['artboard', 'Mesa de trabajo', 'Mayús+O'], ['hand', 'Mano', 'H'], ['zoom', 'Zoom', 'Z'],
+/* registro de herramientas: id -> [nombre, atajo] */
+const TOOL_INFO = {
+  select: ['Selección', 'V'], direct: ['Selección directa', 'A'], group: ['Selección de grupos', ''],
+  wand: ['Varita mágica', 'Y'], lasso: ['Lazo', 'Q'],
+  pen: ['Pluma', 'P'], convert: ['Convertir punto de ancla', 'Mayús+C'],
+  text: ['Texto', 'T'], areatext: ['Texto de área', ''], pathtext: ['Texto en trazado', ''],
+  line: ['Segmento de línea', '\\'], arc: ['Arco', ''], spiral: ['Espiral', ''], rgrid: ['Cuadrícula rectangular', ''], pgrid: ['Cuadrícula polar', ''],
+  rect: ['Rectángulo', 'M'], rrect: ['Rectángulo redondeado', ''], ellipse: ['Elipse', 'L'], polygon: ['Polígono', ''], star: ['Estrella', ''],
+  brush: ['Pincel', 'B'], blob: ['Pincel de manchas', 'Mayús+B'], pencil: ['Lápiz', 'N'],
+  eraser: ['Borrador', 'Mayús+E'], scissors: ['Tijeras', 'C'], knife: ['Cuchillo', ''],
+  rotate: ['Rotar', 'R'], reflect: ['Reflejar', 'O'], scale: ['Escala', 'S'], shear: ['Distorsionar', ''],
+  builder: ['Creador de formas', 'Mayús+M'], gradient: ['Degradado', 'G'], eyedropper: ['Cuentagotas', 'I'], blend: ['Fusión', 'W'],
+  artboard: ['Mesa de trabajo', 'Mayús+O'], hand: ['Mano', 'H'], zoom: ['Zoom', 'Z'],
+};
+/* grupos de la barra (como en Illustrator: la primera es la visible; mantener pulsado muestra el resto) */
+const TOOL_GROUPS = [
+  ['select'], ['direct', 'group'], ['wand', 'lasso'], '|',
+  ['pen', 'convert'], ['text', 'areatext', 'pathtext'], ['line', 'arc', 'spiral', 'rgrid', 'pgrid'],
+  ['rect', 'rrect', 'ellipse', 'polygon', 'star'], ['brush', 'blob'], ['pencil'], ['eraser', 'scissors', 'knife'], '|',
+  ['rotate', 'reflect'], ['scale', 'shear'], ['builder'], '|',
+  ['gradient'], ['eyedropper'], ['blend'], '|', ['artboard'], ['hand'], ['zoom'],
 ];
 
 const Tools = {
   build() {
     const box = $('tools');
-    for (const t of TOOL_LIST) {
-      if (t === '|') { box.insertAdjacentHTML('beforeend', '<div class="tool-sep"></div>'); continue; }
-      const [id, name, key] = t;
+    for (const g of TOOL_GROUPS) {
+      if (g === '|') { box.insertAdjacentHTML('beforeend', '<div class="tool-sep"></div>'); continue; }
+      const ids = g.filter(id => App.tools[id]); if (!ids.length) continue;
       const d = document.createElement('div');
-      d.className = 'tool'; d.dataset.tool = id; d.title = key ? `${name} (${key})` : name;
-      d.innerHTML = `<svg viewBox="0 0 24 24">${ICONS[id]}</svg>`;
-      d.onclick = () => Tools.use(id);
+      d.className = 'tool' + (ids.length > 1 ? ' has-more' : ''); d.dataset.group = ids.join(',');
+      this.paint(d, ids[0]);
+      let timer = null;
+      d.onpointerdown = e => { if (e.button === 0 && ids.length > 1) timer = setTimeout(() => { timer = null; this.flyout(d, ids); }, 350); };
+      d.onpointerup = e => {
+        if (e.button !== 0 || (ids.length > 1 && !timer)) return;
+        clearTimeout(timer); timer = null;
+        if (e.altKey && ids.length > 1) Tools.use(ids[(ids.indexOf(d.dataset.tool) + 1) % ids.length]); /* Alt+clic: siguiente del grupo */
+        else Tools.use(d.dataset.tool);
+      };
+      d.onpointerleave = () => { if (timer) { clearTimeout(timer); timer = null; } };
+      d.oncontextmenu = e => { e.preventDefault(); if (ids.length > 1) this.flyout(d, ids); };
       box.appendChild(d);
     }
+    document.addEventListener('pointerdown', e => { const f = $('toolFlyout'); if (f && !f.contains(e.target)) f.remove(); });
+  },
+  label(id) { const [n, k] = TOOL_INFO[id] || [id, '']; return k ? `${n} (${k})` : n; },
+  paint(d, id) { d.dataset.tool = id; d.title = this.label(id); d.innerHTML = `<svg viewBox="0 0 24 24">${ICONS[id] || ''}</svg>`; },
+  /* menú lateral con las herramientas ocultas del grupo */
+  flyout(btn, ids) {
+    let f = $('toolFlyout'); if (f) f.remove();
+    f = document.createElement('div'); f.id = 'toolFlyout'; f.className = 'tool-flyout';
+    for (const id of ids) {
+      const r = document.createElement('div'); r.className = 'tf-row' + (id === App.toolName ? ' on' : '');
+      const [n, k] = TOOL_INFO[id];
+      r.innerHTML = `<svg viewBox="0 0 24 24">${ICONS[id] || ''}</svg><span>${n}</span><span class="kbd">${k}</span>`;
+      r.onclick = () => { f.remove(); Tools.use(id); };
+      f.appendChild(r);
+    }
+    document.body.appendChild(f);
+    const b = btn.getBoundingClientRect();
+    f.style.left = b.right + 4 + 'px'; f.style.top = Math.min(b.top, innerHeight - f.offsetHeight - 8) + 'px';
   },
   use(name) {
+    if (!App.tools[name]) return;
     if (App.tool && App.tool.deactivate) App.tool.deactivate();
-    App.toolName = name; App.tool = App.tools[name] || App.tools.select;
-    document.querySelectorAll('.tool').forEach(t => t.classList.toggle('active', t.dataset.tool === name));
-    const t = TOOL_LIST.find(x => x[0] === name);
-    $('sbTool').textContent = t ? t[1] : name;
+    App.toolName = name; App.tool = App.tools[name];
+    document.querySelectorAll('.tool').forEach(t => {
+      const inGroup = t.dataset.group.split(',').includes(name);
+      if (inGroup) this.paint(t, name);
+      t.classList.toggle('active', inGroup);
+    });
+    $('sbTool').textContent = (TOOL_INFO[name] || [name])[0];
     App.els.stage.style.cursor = App.tool.cursor || 'default';
     $('cbToolOpts').innerHTML = App.tool.options ? App.tool.options() : '';
     if (App.tool.bindOptions) App.tool.bindOptions();

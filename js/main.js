@@ -3,12 +3,14 @@
 
 (async function init() {
   Object.assign(App.els, { stage: $('stage'), viewport: $('viewport'), content: $('content'), overlay: $('overlay'), artboard: $('artboard') });
+  document.documentElement.classList.add('booting'); /* sin interacción hasta recuperar el autoguardado */
   Tools.build(); Menus.build(); Panels.init(); Rulers.init();
 
   if (await IO.restore()) { App.activeLayer = null; Layers.ensure(); }
   else { Layers.create('Capa 1'); demoArtwork(); }
   View.updateArtboard(); View.fit(); History.reset();
   Tools.use('select'); Panels.refresh(); Panels.renderLayers();
+  document.documentElement.classList.remove('booting');
   Shell.init();
 
   let saveT; App.on('change', () => { clearTimeout(saveT); saveT = setTimeout(() => IO.autosave(), 400); });
@@ -84,8 +86,9 @@
   }, { passive: false });
 
   /* ---------- teclado ---------- */
-  const TOOL_KEYS = { v: 'select', a: 'direct', p: 'pen', n: 'pencil', t: 'text', '\\': 'line', m: 'rect', l: 'ellipse',
-    r: 'rotate', s: 'scale', i: 'eyedropper', g: 'gradient', h: 'hand', z: 'zoom' };
+  /* atajos de herramientas a partir de TOOL_INFO: 'V' -> v, 'Mayús+E' -> s+e */
+  const TOOL_KEYS = {};
+  for (const [id, [, k]] of Object.entries(TOOL_INFO)) if (k && App.tools[id]) TOOL_KEYS[(k.startsWith('Mayús+') ? 's+' + k.slice(6) : k).toLowerCase()] = id;
   document.addEventListener('keydown', ev => {
     if (Dialog.isOpen) return;
     const tag = document.activeElement && document.activeElement.tagName;
@@ -107,15 +110,13 @@
       if (!(App.tool.nudge && App.tool.nudge(dx, dy))) Actions.nudge(dx, dy);
       return;
     }
-    if (ev.shiftKey && k.toLowerCase() === 'c') return Tools.use('convert');
     if (k === 'Escape') { if (App.toolName === 'select') Selection.clear(); else Tools.use('select'); return; }
-    if (ev.shiftKey && k.toLowerCase() === 'e') return Tools.use('eraser');
-    if (ev.shiftKey && k.toLowerCase() === 'o') return Tools.use('artboard');
     if (ev.shiftKey && k.toLowerCase() === 'x') return Actions.swapFS();
     if (k === 'x') { App.activeFS = App.activeFS === 'fill' ? 'stroke' : 'fill'; Panels.refresh(); return; }
     if (k === 'd') return Actions.defaultFS();
     if (k === '/') return Panels.setColor(App.activeFS, 'none');
-    if (!ev.shiftKey && !ev.altKey && TOOL_KEYS[k]) Tools.use(TOOL_KEYS[k]);
+    const sk = (ev.shiftKey ? 's+' : '') + k.toLowerCase();
+    if (!ev.altKey && TOOL_KEYS[sk]) Tools.use(TOOL_KEYS[sk]);
   });
   document.addEventListener('keyup', ev => {
     if (ev.key === ' ' && tempHand && !pressed) { tempHand = null; stage.style.cursor = App.tool.cursor || 'default'; }

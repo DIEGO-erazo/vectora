@@ -119,6 +119,18 @@ test('Simplificar una recta de 100 puntos', () => {
   const pts = Array.from({ length: 100 }, (_, i) => ({ x: i, y: 2 * i })); eq(rdp(pts, 0.5).length, 2);
 });
 
+test('Trazos cruzados se unen en un solo contorno (vértices soldados)', () => {
+  const mk = pts => Boolean2D.op(strokePolygon([{ pts, closed: false }], 8, 'round', 'round'), { rings: [], rule: 'nonzero' }, 'union');
+  const h = [], v = []; for (let x = 600; x <= 700; x += 12.5) h.push({ x, y: 300 }); for (let y = 260; y <= 360; y += 12.5) v.push({ x: 650, y });
+  const U = Boolean2D.op(mk(h), mk(v), 'union');
+  eq(U.rings.length, 1, 'anillos'); eq(Boolean2D.inside(U, { x: 650, y: 300 }), true, 'centro relleno');
+});
+test('Simplificar un anillo cerrado no lo colapsa', () => {
+  const ring = Array.from({ length: 120 }, (_, i) => ({ x: 50 * Math.cos(i * Math.PI / 60), y: 50 * Math.sin(i * Math.PI / 60) }));
+  const s = rdpClosed(ring, 0.5); if (s.length < 8) throw new Error('quedaron ' + s.length + ' puntos');
+  return near(Math.abs(shoelace(s)), Math.PI * 2500, 120, 'área');
+});
+
 /* ---------- Transformaciones ---------- */
 test('normalizeTransform lleva la escala a la geometría', () => {
   const r = svgEl('rect', { x: 10, y: 10, width: 20, height: 10, transform: 'matrix(2 0 0 2 5 5)' }, layer);

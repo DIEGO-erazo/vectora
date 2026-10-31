@@ -67,17 +67,26 @@ const Boolean2D = {
         if (a.x !== b.x || a.y !== b.y) segs.push({ a, b, src: a.src || null, t0: a.t || 0, t1: a.te == null ? 1 : a.te, cuts: [] });
       }
     this.split(segs);
+    /* soldar vértices: intersecciones calculadas por separado que caen en el mismo sitio
+       pasan a ser el mismo vértice, para que los contornos se encadenen sin romperse */
+    const grid = new Map(), EPS = 1e-3; let nid = 0;
+    const weld = p => {
+      const gx = Math.round(p.x / EPS), gy = Math.round(p.y / EPS);
+      for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++)
+        for (const c of grid.get((gx + dx) + ',' + (gy + dy)) || []) if (Math.abs(c.x - p.x) <= EPS && Math.abs(c.y - p.y) <= EPS) return c;
+      const c = { x: p.x, y: p.y, id: nid++ }, k = gx + ',' + gy;
+      (grid.get(k) || grid.set(k, []).get(k)).push(c); return c;
+    };
     const pieces = [];
     for (const s of segs) {
       const cuts = [{ t: 0, p: s.a }, ...s.cuts, { t: 1, p: s.b }].sort((x, y) => x.t - y.t);
       const T = u => s.t0 + u * (s.t1 - s.t0);
       for (let i = 0; i + 1 < cuts.length; i++) {
-        const a = cuts[i].p, b = cuts[i + 1].p; if (Geo.dist(a, b) < 1e-6) continue;
+        const a = weld(cuts[i].p), b = weld(cuts[i + 1].p); if (a === b) continue;
         pieces.push({ a, b, src: s.src, ta: T(cuts[i].t), tb: T(cuts[i + 1].t) });
       }
     }
-    const kept = [], seen = new Set(), E = 0.01;
-    const key = p => `${p.x.toFixed(3)},${p.y.toFixed(3)}`;
+    const kept = new Map(), E = 0.01;
     for (const s of pieces) {
       const dx = s.b.x - s.a.x, dy = s.b.y - s.a.y, L = Math.hypot(dx, dy), nx = -dy / L * E, ny = dx / L * E;
       const m = { x: (s.a.x + s.b.x) / 2, y: (s.a.y + s.b.y) / 2 };
@@ -85,22 +94,23 @@ const Boolean2D = {
       const rl = f(this.inside(A, pl), this.inside(B, pl)), rr = f(this.inside(A, pr), this.inside(B, pr));
       if (rl === rr) continue;
       const seg = rl ? s : { a: s.b, b: s.a, src: s.src, ta: s.tb, tb: s.ta };
-      const k = key(seg.a) + '>' + key(seg.b); if (seen.has(k)) continue; seen.add(k);
-      kept.push(seg);
+      const k = seg.a.id + '>' + seg.b.id, back = seg.b.id + '>' + seg.a.id;
+      if (kept.has(back)) { kept.delete(back); continue; } /* ida y vuelta: astilla sin área */
+      if (!kept.has(k)) kept.set(k, seg);
     }
-    /* encadenar */
-    const byStart = new Map();
-    for (const s of kept) { const k = key(s.a); if (!byStart.has(k)) byStart.set(k, []); byStart.get(k).push(s); }
+    /* encadenar: solo se aceptan anillos que se cierran */
+    const list = [...kept.values()], byStart = new Map();
+    for (const s of list) (byStart.get(s.a.id) || byStart.set(s.a.id, []).get(s.a.id)).push(s);
     const rings = [];
-    for (const s0 of kept) {
+    for (const s0 of list) {
       if (s0.used) continue;
-      const ring = []; let s = s0, guard = 0;
-      while (s && !s.used && guard++ < 1e5) {
+      const ring = []; let s = s0, guard = 0, closed = false;
+      while (s && !s.used && guard++ < 1e6) {
         s.used = true; ring.push({ x: s.a.x, y: s.a.y, src: s.src, t: s.ta, te: s.tb });
-        const next = (byStart.get(key(s.b)) || []).find(x => !x.used);
-        if (!next) break; s = next;
+        if (s.b.id === s0.a.id) { closed = true; break; }
+        s = (byStart.get(s.b.id) || []).find(x => !x.used);
       }
-      if (ring.length >= 3) rings.push(this.simplify(ring));
+      if (closed && ring.length >= 3) rings.push(this.simplify(ring));
     }
     return { rings: rings.filter(r => r.length >= 3), rule: 'nonzero' };
   },

@@ -286,4 +286,3 @@ App.tools.convert = {
   },
 };
 ICONS.convert = '<path d="M5 20l7-14 7 14"/><path d="M8 6h8" stroke-dasharray="2 2"/><rect x="10.5" y="4.5" width="3" height="3"/>';
-TOOL_LIST.splice(TOOL_LIST.findIndex(t => t[0] === 'pen') + 1, 0, ['convert', 'Convertir punto de ancla', 'Mayús+C']);

@@ -26,7 +26,8 @@ self.addEventListener('fetch', e => {
   if (url.origin === location.origin) {
     e.respondWith((async () => {
       try {
-        const res = await fetch(req);
+        /* no-cache: revalida con el servidor para no servir archivos viejos de la caché HTTP */
+        const res = await fetch(req, { cache: 'no-cache' });
         if (res.ok) (await caches.open(VERSION)).put(req, res.clone());
         return res;
       } catch (err) {

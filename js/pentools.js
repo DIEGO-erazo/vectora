@@ -27,6 +27,15 @@ function rdp(pts, eps) {
   if (dmax <= eps) return [a, b];
   return rdp(pts.slice(0, idx + 1), eps).slice(0, -1).concat(rdp(pts.slice(idx), eps));
 }
+/* simplificación de un anillo cerrado (sin repetir el primer punto al final):
+   se parte por el punto más alejado del inicio para que ningún tramo degenere */
+function rdpClosed(r, eps) {
+  if (r.length < 4) return r;
+  let far = 0, fd = -1;
+  r.forEach((p, i) => { const d = Math.hypot(p.x - r[0].x, p.y - r[0].y); if (d > fd) { fd = d; far = i; } });
+  const a = rdp(r.slice(0, far + 1), eps), b = rdp([...r.slice(far), r[0]], eps);
+  return [...a.slice(0, -1), ...b.slice(0, -1)];
+}
 function smoothNodes(pts, closed) {
   const n = pts.length, nodes = pts.map(p => ({ x: p.x, y: p.y, hin: null, hout: null }));
   for (let i = 0; i < n; i++) {
@@ -56,7 +65,7 @@ App.tools.pencil = {
     const z = App.view.zoom, pts = this.pts;
     if (pts.length < 3) { this.el.remove(); this.pts = null; return; }
     const closed = Geo.dist(pts[0], pts[pts.length - 1]) * z < 10 && pts.length > 10;
-    let s = rdp(pts, this.smooth / z); if (closed && s.length > 2) s = s.slice(0, -1);
+    const s = closed ? rdpClosed(pts, this.smooth / z) : rdp(pts, this.smooth / z);
     this.el.setAttribute('d', PathData.serialize([{ nodes: smoothNodes(s, closed), closed }]));
     Selection.set([this.el]); History.commit(); this.pts = null; this.el = null;
   },

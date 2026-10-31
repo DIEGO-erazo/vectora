@@ -7,6 +7,7 @@
 html,body{margin:0;height:100%;overflow:hidden;background:var(--bg1);color:var(--text);
   font:12px/1.3 "Segoe UI",system-ui,-apple-system,sans-serif;user-select:none}
 button,input,select,textarea{font:inherit;color:inherit}
+.booting #app{pointer-events:none}
 #app{display:grid;grid-template-rows:30px 36px 1fr 22px;height:100vh}
 
 /* ---------- Menús ---------- */
@@ -45,6 +46,14 @@ input:focus,select:focus{outline:1px solid var(--accent);border-color:var(--acce
 .tool.active{background:#1b1b1b;box-shadow:inset 0 0 0 1px #0d0d0d}
 .tool svg{width:18px;height:18px;fill:none;stroke:#cfcfcf;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
 .tool.active svg{stroke:#fff}
+.tool.has-more::after{content:"";position:absolute;right:3px;bottom:3px;border:3px solid transparent;border-right-color:#aaa;border-bottom-color:#aaa}
+.tool-flyout{position:fixed;z-index:150;background:var(--bg2);border:1px solid #111;border-radius:3px;box-shadow:0 6px 18px rgba(0,0,0,.5);padding:3px 0;min-width:220px}
+.tf-row{display:flex;align-items:center;gap:10px;padding:5px 12px;cursor:default;white-space:nowrap}
+.tf-row:hover{background:var(--accent2);color:#fff}
+.tf-row.on{font-weight:600}
+.tf-row svg{width:18px;height:18px;fill:none;stroke:#d0d0d0;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.tf-row span:nth-child(2){flex:1}
+.tf-row .kbd{color:var(--dim)}
 .tool-sep{height:1px;width:28px;background:var(--bg4);margin:4px auto;grid-column:1/-1}
 @media (max-height:900px){
   #main{grid-template-columns:76px 1fr 270px}
