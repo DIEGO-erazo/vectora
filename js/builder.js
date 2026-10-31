@@ -54,9 +54,30 @@ const Faces = {
       if (!owners.length) continue; /* exterior o agujero */
       bounded.push({ ...f, pt, owners, top: Math.max(...owners) });
     }
-    /* la cara exterior de cada componente rodea a las demás: se descarta la de orientación contraria */
+    /* los ciclos de orientación contraria son contornos exteriores o agujeros:
+       cada agujero se asigna a la región más pequeña que lo rodea (p. ej. un anillo) */
     const sign = Math.sign(bounded.reduce((s, f) => s + Math.sign(f.area), 0)) || 1;
-    return bounded.filter(f => Math.sign(f.area) === sign);
+    const regions = bounded.filter(f => Math.sign(f.area) === sign).map(f => ({ ...f, holes: [] }));
+    for (const c of faces) {
+      if (Math.sign(c.area) === sign) continue;
+      const p = this.outside(c.ring); if (!p) continue;
+      let host = null;
+      for (const f of regions) if (this.contains(f, p) && (!host || Math.abs(f.area) < Math.abs(host.area))) host = f;
+      if (host) host.holes.push(c.ring);
+    }
+    return regions;
+  },
+  /* ¿el punto está en la región (dentro del contorno y fuera de sus agujeros)? */
+  contains(f, p) { return inPolygon(f.ring, p) && !(f.holes || []).some(h => inPolygon(h, p)); },
+  rings(f) { return [f.ring, ...(f.holes || [])]; },
+  /* un punto justo fuera del anillo, junto a su arista más larga */
+  outside(r) {
+    let best = null;
+    for (let i = 0; i < r.length; i++) { const a = r[i], b = r[(i + 1) % r.length], L = Geo.dist(a, b); if (!best || L > best.L) best = { a, b, L }; }
+    if (!best || best.L < 1e-6) return null;
+    const m = { x: (best.a.x + best.b.x) / 2, y: (best.a.y + best.b.y) / 2 }, nx = -(best.b.y - best.a.y) / best.L, ny = (best.b.x - best.a.x) / best.L;
+    for (const e of [0.02, 0.2]) for (const s of [1, -1]) { const p = { x: m.x + nx * e * s, y: m.y + ny * e * s }; if (!inPolygon(r, p)) return p; }
+    return null;
   },
   /* un punto dentro del anillo, junto a su arista más larga */
   interior(r) {
@@ -79,7 +100,7 @@ App.tools.builder = {
   },
   faceAt(p) {
     let best = null;
-    for (const f of this.F || []) if (inPolygon(f.ring, p) && (!best || Math.abs(f.area) < Math.abs(best.area))) best = f;
+    for (const f of this.F || []) if (Faces.contains(f, p) && (!best || Math.abs(f.area) < Math.abs(best.area))) best = f;
     return best;
   },
   hover(p) { this.hot = this.faceAt(p); Selection.draw(); },
@@ -103,16 +124,17 @@ App.tools.builder = {
     /* regiones elegidas: unir (o eliminar con Alt); el resto quedan separadas */
     if (!d.erase) {
       const chosen = [...d.set];
-      const merged = chosen.slice(1).reduce((acc, f) => Boolean2D.op(acc, { rings: [f.ring], rule: 'nonzero' }, 'union'), { rings: [chosen[0].ring], rule: 'nonzero' });
+      const merged = chosen.slice(1).reduce((acc, f) => Boolean2D.op(acc, { rings: Faces.rings(f), rule: 'nonzero' }, 'union'), { rings: Faces.rings(chosen[0]), rule: 'nonzero' });
       emit(merged.rings, styleOf(chosen[0]));
     }
-    for (const f of F) if (!d.set.has(f)) emit([f.ring], styleOf(f));
+    for (const f of F) if (!d.set.has(f)) emit(Faces.rings(f), styleOf(f));
     shapes.forEach(s => s.remove());
     Selection.set(made.filter(e => e.isConnected)); History.named('Creador de formas', () => History.commit()); App.emit('layers');
     this.refresh(); Selection.draw();
   },
   overlay(g) {
-    const draw = (f, fill) => svgEl('path', { d: 'M' + f.ring.map(q => { const s = View.docToStage(q.x, q.y); return `${s.x} ${s.y}`; }).join('L') + 'Z', fill, stroke: '#1e90ff', 'stroke-dasharray': '3 2' }, g);
+    const ringD = r => 'M' + r.map(q => { const s = View.docToStage(q.x, q.y); return `${s.x} ${s.y}`; }).join('L') + 'Z';
+    const draw = (f, fill) => svgEl('path', { d: Faces.rings(f).map(ringD).join(' '), 'fill-rule': 'evenodd', fill, stroke: '#1e90ff', 'stroke-dasharray': '3 2' }, g);
     if (this.drag) { for (const f of this.drag.set) draw(f, this.drag.erase ? 'rgba(229,51,42,.35)' : 'rgba(30,144,255,.3)'); drawPolyline(g, this.drag.path, { stroke: this.drag.erase ? '#e5332a' : '#1e90ff' }); }
     else if (this.hot) draw(this.hot, 'rgba(160,160,160,.35)');
   },
