@@ -22,30 +22,38 @@ Programa de escritorio para Windows, macOS y Linux, y también aplicación web i
 ## Funciones
 
 - **Interfaz profesional:** barra de herramientas con grupos desplegables, panel **Propiedades** contextual,
-  paneles en pestañas plegables, **varios documentos en pestañas**, pantalla de inicio con plantillas y
-  archivos recientes (con miniatura), menú contextual y ayuda de atajos (F1).
-- **Herramientas (más de 35):** selección, selección directa, selección de grupos, varita mágica, lazo,
-  pluma, convertir punto de ancla, texto, texto de área, texto en trazado, línea, arco, espiral,
-  cuadrículas rectangular y polar, rectángulo (también redondeado), elipse, polígono, estrella, pincel,
-  pincel de manchas, lápiz, borrador real, tijeras, cuchillo, rotar, reflejar, escala, distorsionar,
-  **creador de formas**, degradado, cuentagotas, **fusión**, mesa de trabajo, mano y zoom.
-- **Documento:** ajustes de Móvil, Web, Imprimir, Cine y vídeo, Redes sociales e Ilustración;
-  unidades (px, pt, mm, cm, pulgadas, picas), orientación, sangrado y **varias mesas de trabajo**.
-- **Precisión:** guías inteligentes con ajuste a bordes, centros y **puntos de ancla**, reglas y guías,
-  cuadrícula, panel Transformar con **punto de referencia de 9 posiciones**, cuadro delimitador girado
-  y **modo aislamiento** (doble clic en un grupo).
-- **Trazados:** Buscatrazos con curvas exactas (unificar, menos frente, intersecar, excluir), unir,
-  simplificar, contornear trazo, desplazar trazado, trazado compuesto, máscara de recorte y
-  Transformar de nuevo (Ctrl+D).
-- **Texto:** texto de punto, de área (ajuste automático de líneas) y en trazado; panel Carácter
-  (interlineado, tracking); cambiar mayúsculas; **Crear contornos** con las fuentes instaladas.
-- **Imagen:** **Calco de imagen** (fotografía, 3/6/16 colores, grises, blanco y negro, silueta).
-- **Color y apariencia:** Color (RGB/HSB), muestras propias y recientes, Degradado con varias paradas,
-  Transparencia con modos de fusión, puntas de flecha, **Editar colores** (invertir, grises, saturar,
-  equilibrio, fusionar de delante a detrás).
-- **Efectos:** sombra paralela, desenfoque, fruncir y engordar, retorcer, zigzag, rugosidad y redondear
-  esquinas, todos con vista previa.
-- **Historial** con nombre de cada paso, deshacer ilimitado por documento y autoguardado de la sesión.
+  **barra de tareas contextual**, paneles en pestañas plegables, **varios documentos en pestañas**, pantalla
+  de inicio con plantillas y archivos recientes, menú contextual, **temas** (oscuro, medio y claro),
+  **Preferencias**, **atajos de teclado personalizables** e interfaz en **español o inglés**.
+- **Herramientas (más de 45):** selección, selección directa, selección de grupos, varita mágica, lazo,
+  pluma, **curvatura**, convertir punto de ancla, texto, texto de área, texto en trazado, línea, arco,
+  espiral, cuadrículas, rectángulo, elipse, polígono, estrella, pincel, pincel de manchas, lápiz,
+  **suavizar**, **borrador de trazados**, **unir**, borrador, tijeras, cuchillo, rotar, reflejar, escala,
+  distorsionar, **transformación libre** (distorsión libre y perspectiva), **anchura**, creador de formas,
+  **bote de pintura interactiva**, degradado (editable sobre el objeto), cuentagotas, fusión, mesa de
+  trabajo, mano y zoom.
+- **Documento:** ajustes de Móvil, Web, Imprimir, Cine y vídeo, Redes sociales e Ilustración; unidades,
+  orientación, sangrado, **varias mesas de trabajo** y **modo de color RGB o CMYK**.
+- **Precisión:** guías inteligentes con **etiquetas de medida**, ajuste a bordes, centros y puntos de
+  ancla, reglas con origen ajustable y guías (también creadas desde objetos), cuadrícula, Transformar con
+  punto de referencia, **Transformar cada uno**, **objeto clave** y **distribuir espaciado**, modo aislamiento.
+- **Trazados:** **Buscatrazos completo** (unificar, menos frente, intersecar, excluir, dividir, recortar,
+  combinar, cortar, contorno, menos fondo), **esquinas en vivo**, unir, simplificar, contornear trazo,
+  desplazar trazado, trazado compuesto, máscara de recorte y Transformar de nuevo.
+- **Apariencia:** panel **Apariencia** con **efectos en vivo** editables (fruncir y engordar, retorcer,
+  zigzag, rugosidad, redondear esquinas, **15 deformaciones de envolvente**, sombra, desenfoque),
+  Expandir apariencia, **estilos gráficos**, **símbolos** y **motivos** (con biblioteca).
+- **Pinceles:** caligráficos, de arte y de dispersión, pinceles propios a partir de la selección y
+  **perfiles de anchura variables**.
+- **Texto:** Carácter (fuentes del sistema, **OpenType**, subrayado), **Párrafo** (justificar, sangrías,
+  espacios), **texto enlazado** entre cuadros, **estilos de párrafo y de carácter**, **Glifos**,
+  **buscar y reemplazar**, revisión ortográfica y Crear contornos.
+- **Color:** Color (RGB, HSB, **CMYK**), muestras, **colores globales y planos** con matices, Degradado,
+  Transparencia, **Volver a colorear ilustración** con rueda de armonía y Editar colores.
+- **Capas:** miniaturas, opciones de capa (plantilla, no imprimible), recopilar, liberar a capas, fusionar.
+- **Automatización:** **consola de scripts** en JavaScript con ejemplos; cada script se deshace de una vez.
+- **Imagen:** Calco de imagen (fotografía, colores, grises, blanco y negro, silueta).
+- **Historial** con nombre de cada paso, deshacer por documento y autoguardado de la sesión.
 
 ### Importar y exportar
 
@@ -55,7 +63,8 @@ Programa de escritorio para Windows, macOS y Linux, y también aplicación web i
 | **Exportar como** | PNG, JPEG y WebP (72/150/300 ppp o personalizado, fondo, suavizado, calidad), SVG (decimales, CSS interno, minificado, adaptable), PDF vectorial (sangrado y marcas de corte) |
 | **Varias mesas** | PDF de varias páginas o un archivo por mesa en ZIP |
 | **Exportar para pantallas** | ZIP con varias escalas: Web (1x, 2x + SVG), iOS (1x, 2x, 3x), Android (mdpi … xxxhdpi) o personalizado |
-| **Guardar** | SVG con capas, mesas de trabajo, guías, muestras, unidades y sangrado |
+| **Guardar** | SVG con capas, mesas de trabajo, guías, muestras, colores globales, estilos, pinceles, unidades y sangrado |
+| **Imprimir** | una página por mesa, tamaño de papel, marcas de recorte y de registro, sangrado |
 
 Pulsa **F1** dentro del programa para ver todos los atajos de teclado.
 
@@ -103,6 +112,11 @@ La versión web se publica sola en **GitHub Pages** con cada cambio en `main`. A
 | `js/docs.js`, `js/artboards.js`, `js/isolation.js` | pestañas e inicio, mesas de trabajo y modo aislamiento |
 | `js/panels*.js`, `js/menus.js`, `js/dialogs.js`, `js/newdoc.js`, `js/guides.js` | paneles (Propiedades, Transformar, Historial…), menús y diálogos |
 | `js/files.js`, `js/importer.js`, `js/exporter.js` | archivos, importación y exportación |
+| `js/fxlive.js`, `js/brushes.js`, `js/gstyles.js` | efectos en vivo, Apariencia, pinceles, anchura, deformar y estilos gráficos |
+| `js/drawtools.js`, `js/liveshapes.js`, `js/gradannot.js` | curvatura, suavizar, borrador de trazados, unir, transformación libre, pintura interactiva, esquinas en vivo y degradado sobre el objeto |
+| `js/typo.js`, `js/colorx.js` | párrafo, texto enlazado, OpenType, glifos, estilos de texto · CMYK, colores globales, volver a colorear e impresión |
+| `js/symbols.js`, `js/layers2.js`, `js/objectops.js`, `js/pathfinder2.js`, `js/taskbar.js` | símbolos y motivos, capas, alinear y seleccionar, buscatrazos, barra de tareas |
+| `js/prefs.js`, `js/appx.js`, `js/i18n.js` | preferencias y temas, atajos, scripts, actualizaciones e idioma |
 | `js/app.js`, `sw.js`, `manifest.webmanifest` | integración como aplicación (escritorio y PWA) |
 | `electron/` | programa de escritorio |
 
@@ -117,8 +131,10 @@ Las contribuciones son bienvenidas. Lee [CONTRIBUTING.md](CONTRIBUTING.md) y abr
 
 ---
 
-**English:** Vectora is a free, open-source vector graphics editor with a professional workflow: pen and node editing,
-exact-curve boolean operations, a shape builder, blends, image trace, text on paths and create-outlines, multiple
-artboards and document tabs, smart guides, gradients, document presets with real units, and import/export of
-SVG, PDF, AI, PNG, JPEG and WebP. It ships as a desktop app for Windows, macOS and Linux (Electron) and as an
-installable web app. The interface is in Spanish. MIT licensed.
+**English:** Vectora is a free, open-source vector graphics editor with a professional workflow: pen, curvature and
+node editing, live corners, a complete Pathfinder, shape builder and live paint, live effects with an Appearance panel,
+envelope warps, graphic styles, symbols and patterns, calligraphic/art/scatter brushes and variable width strokes,
+area and threaded type with paragraph and character styles, OpenType and glyphs, global and spot colors, CMYK mode,
+Recolor Artwork, multiple artboards and document tabs, smart guides, scripting, customizable shortcuts, and
+import/export of SVG, PDF, AI, PNG, JPEG and WebP. It ships as a desktop app for Windows, macOS and Linux (Electron)
+and as an installable web app. The interface is available in **English and Spanish** (Preferences ▸ Language). MIT licensed.

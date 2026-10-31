@@ -3,6 +3,23 @@
 Comparación entre Vectora 1.1 y Adobe Illustrator (versión actual), y plan por fases para acercarnos.
 Leyenda: ✅ lo tenemos · 🟡 parcial · ❌ falta. Esfuerzo: **S** (horas) · **M** (1–2 días) · **L** (varios días).
 
+## Estado en Vectora 1.2 (octubre de 2026)
+
+Las seis fases del plan están implementadas y probadas:
+
+| Fase | Hecho |
+|---|---|
+| A — Día a día | Buscatrazos completo, barra de tareas contextual, etiquetas de medida, esquinas en vivo, objeto clave y distribuir espaciado, Transformar cada uno, Seleccionar ▸ Igual/Objeto/guardadas, guías desde objetos y origen de reglas, capas con miniaturas y opciones, Preferencias y temas |
+| B — Apariencia | Efectos en vivo con panel Apariencia y Expandir apariencia, estilos gráficos, símbolos, motivos, degradado editable sobre el objeto |
+| C — Tipografía | Párrafo (justificar, sangrías, espacios), texto enlazado, OpenType, fuentes del sistema, Glifos, estilos de párrafo y carácter, buscar y reemplazar, ortografía |
+| D — Dibujo | Curvatura, Suavizar, Borrador de trazados, Unir, Transformación libre/perspectiva, Pintura interactiva, Anchura y perfiles, pinceles caligráficos/arte/dispersión, Deformar (15 estilos) |
+| E — Color | Modo CMYK, colores globales y planos con matices, Volver a colorear ilustración, impresión con marcas |
+| F — Aplicación | Interfaz en inglés, atajos personalizables, consola de scripts, búsqueda de actualizaciones |
+
+Pendiente para versiones futuras: formato de texto por rangos (una palabra en negrita dentro de un párrafo),
+separación de colores real en PDF (las tintas planas se exportan como RGB), espacios de trabajo con paneles
+flotantes, malla de degradado, firma de código de los instaladores y actualización automática en segundo plano.
+
 ## 1. Dónde estamos
 
 | Área | Vectora 1.1 | Illustrator | Estado |
