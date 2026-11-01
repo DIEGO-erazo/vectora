@@ -365,7 +365,8 @@ V Selección · A Selección directa · Y Varita mágica · Q Lazo
 P Pluma · Mayús+\` Curvatura · Mayús+C Convertir punto de ancla · T Texto · \ Línea · M Rectángulo · L Elipse
 B Pincel · Mayús+B Pincel de manchas · N Lápiz · Mayús+E Borrador · C Tijeras
 R Rotar · O Reflejar · S Escala · E Transformación libre · Mayús+W Anchura
-Mayús+M Creador de formas · K Pintura interactiva · W Fusión
+Mayús+M Creador de formas · K Pintura interactiva · W Fusión · Mayús+N Shaper · Mayús+R Deformar (licuar)
+U Malla · Mayús+P Perspectiva · Mayús+S Rociador de símbolos · Mayús+H Rotar vista (Mayús+Esc la restablece)
 G Degradado · I Cuentagotas · Mayús+O Mesa de trabajo · H Mano (o Espacio) · Z Zoom
 
 DOCUMENTOS
@@ -377,7 +378,7 @@ Ctrl+Z / Ctrl+Mayús+Z Deshacer / Rehacer · Ctrl+C / X / V Copiar, cortar, pega
 Ctrl+F / Ctrl+B Pegar delante / detrás · Ctrl+G / Ctrl+Mayús+G Agrupar / Desagrupar
 Ctrl+D Transformar de nuevo · Ctrl+J Unir · Ctrl+7 Máscara de recorte · Ctrl+8 Trazado compuesto
 Ctrl+Mayús+O Crear contornos · Ctrl+Alt+B Fusión · Ctrl+2 / Ctrl+3 Bloquear / Ocultar
-Ctrl+Alt+Mayús+W Deformar · Ctrl+K Preferencias · Ctrl+Alt+Mayús+K Atajos de teclado · Ctrl+F12 Scripts
+Ctrl+Alt+Mayús+W Deformar · Ctrl+Alt+J Promediar · Mayús+D Modo de dibujo · Ctrl+K Preferencias · Ctrl+Alt+Mayús+K Atajos de teclado · Ctrl+F12 Scripts
 
 VISTA
 Ctrl+0 Encajar mesa · Ctrl+Alt+0 Encajar todas · Ctrl+1 Tamaño real · Ctrl+R Reglas

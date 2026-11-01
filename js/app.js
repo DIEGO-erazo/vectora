@@ -3,7 +3,7 @@
 'use strict';
 
 const APP_INFO = {
-  version: '1.2.0',
+  version: '1.3.0',
   /* cambia esta dirección por la de tu repositorio de GitHub */
   repo: 'https://github.com/DIEGO-erazo/vectora',
 };

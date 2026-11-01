@@ -51,6 +51,11 @@ Programa de escritorio para Windows, macOS y Linux, y también aplicación web i
 - **Color:** Color (RGB, HSB, **CMYK**), muestras, **colores globales y planos** con matices, Degradado,
   Transparencia, **Volver a colorear ilustración** con rueda de armonía y Editar colores.
 - **Capas:** miniaturas, opciones de capa (plantilla, no imprimible), recopilar, liberar a capas, fusionar.
+- **Novedades de la 1.3:** Objeto ▸ **Repetir** (radial, cuadrícula, espejo), **máscaras de opacidad**,
+  modos **Dibujar detrás / dentro**, **Shaper**, **Entrelazar**, herramientas de **Licuar**, **malla de degradado**,
+  **cuadrícula de perspectiva**, **3D** (extruir y biselar, revolución), resplandores, desvanecer, grano y
+  **Garabato**, rociador de símbolos, **formato por rangos en el texto** (una palabra en negrita o de otro color),
+  paneles **Navegador**, **Información** y **Acciones**, **espacios de trabajo** con paneles flotantes y **Rotar vista**.
 - **Automatización:** **consola de scripts** en JavaScript con ejemplos; cada script se deshace de una vez.
 - **Imagen:** Calco de imagen (fotografía, colores, grises, blanco y negro, silueta).
 - **Historial** con nombre de cada paso, deshacer por documento y autoguardado de la sesión.
@@ -116,7 +121,8 @@ La versión web se publica sola en **GitHub Pages** con cada cambio en `main`. A
 | `js/drawtools.js`, `js/liveshapes.js`, `js/gradannot.js` | curvatura, suavizar, borrador de trazados, unir, transformación libre, pintura interactiva, esquinas en vivo y degradado sobre el objeto |
 | `js/typo.js`, `js/colorx.js` | párrafo, texto enlazado, OpenType, glifos, estilos de texto · CMYK, colores globales, volver a colorear e impresión |
 | `js/symbols.js`, `js/layers2.js`, `js/objectops.js`, `js/pathfinder2.js`, `js/taskbar.js` | símbolos y motivos, capas, alinear y seleccionar, buscatrazos, barra de tareas |
-| `js/prefs.js`, `js/appx.js`, `js/i18n.js` | preferencias y temas, atajos, scripts, actualizaciones e idioma |
+| `js/quick.js`, `js/masks.js`, `js/shaper.js`, `js/fxfilters.js`, `js/three.js`, `js/mesh.js`, `js/perspective.js`, `js/richtext.js` | funciones de la 1.3: repetir, máscaras, shaper y licuar, filtros, 3D, malla, perspectiva y texto con formato |
+| `js/prefs.js`, `js/appx.js`, `js/i18n.js`, `js/actions2.js`, `js/workspace.js` | preferencias y temas, atajos, scripts, actualizaciones e idioma |
 | `js/app.js`, `sw.js`, `manifest.webmanifest` | integración como aplicación (escritorio y PWA) |
 | `electron/` | programa de escritorio |
 
@@ -135,6 +141,7 @@ Las contribuciones son bienvenidas. Lee [CONTRIBUTING.md](CONTRIBUTING.md) y abr
 node editing, live corners, a complete Pathfinder, shape builder and live paint, live effects with an Appearance panel,
 envelope warps, graphic styles, symbols and patterns, calligraphic/art/scatter brushes and variable width strokes,
 area and threaded type with paragraph and character styles, OpenType and glyphs, global and spot colors, CMYK mode,
-Recolor Artwork, multiple artboards and document tabs, smart guides, scripting, customizable shortcuts, and
+Recolor Artwork, repeat (radial/grid/mirror), opacity masks, gradient mesh, perspective grid, simple 3D, rich text ranges,
+liquify tools, actions and floating workspaces, multiple artboards and document tabs, smart guides, scripting, customizable shortcuts, and
 import/export of SVG, PDF, AI, PNG, JPEG and WebP. It ships as a desktop app for Windows, macOS and Linux (Electron)
 and as an installable web app. The interface is available in **English and Spanish** (Preferences ▸ Language). MIT licensed.

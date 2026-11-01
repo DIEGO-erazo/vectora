@@ -16,9 +16,15 @@ Las seis fases del plan están implementadas y probadas:
 | E — Color | Modo CMYK, colores globales y planos con matices, Volver a colorear ilustración, impresión con marcas |
 | F — Aplicación | Interfaz en inglés, atajos personalizables, consola de scripts, búsqueda de actualizaciones |
 
-Pendiente para versiones futuras: formato de texto por rangos (una palabra en negrita dentro de un párrafo),
-separación de colores real en PDF (las tintas planas se exportan como RGB), espacios de trabajo con paneles
-flotantes, malla de degradado, firma de código de los instaladores y actualización automática en segundo plano.
+**Vectora 1.3** añade: Repetir, puntos de ancla (añadir, quitar, promediar), dividir objetos debajo y en cuadrícula,
+limpiar, rasterizar, recortar imagen, Navegador, Información, Rotar vista, máscaras de opacidad, modos de dibujo,
+Shaper, Entrelazar, Licuar, filtros apilables (resplandores, desvanecer, grano), Transformar/Desplazar/Contornear/
+Garabato en vivo, herramientas de símbolos, Acciones, espacios de trabajo, 3D, malla de degradado, cuadrícula de
+perspectiva y formato por rangos en el texto.
+
+Pendiente para versiones futuras: separación de colores real en PDF (las tintas planas se exportan como RGB),
+plano de suelo en la perspectiva, curvas en las líneas de la malla, materiales y luces en 3D, firma de código de
+los instaladores y actualización automática en segundo plano.
 
 ## 1. Dónde estamos
 
