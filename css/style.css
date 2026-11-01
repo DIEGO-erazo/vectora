@@ -468,3 +468,10 @@ input[type=range]{height:12px;accent-color:var(--accent)}
 .info-grid b{font-weight:500}
 .info-note{color:var(--dim);font-size:11px}
 .view-rotated .ruler,.view-rotated .ruler-corner{visibility:hidden}
+/* modos de dibujo y máscara de opacidad */
+.dm-btns{display:flex;gap:2px;margin-top:6px}
+.dm-btns button{width:16px;height:16px;padding:0;background:none;border:1px solid transparent;border-radius:2px;color:var(--icon);cursor:pointer}
+.dm-btns button svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.4}
+.dm-btns button.on{border-color:var(--accent);background:var(--row-on)}
+.om-row{display:flex;flex-wrap:wrap;gap:4px;align-items:center;font-size:11.5px}
+.om-row label{display:flex;align-items:center;gap:3px}

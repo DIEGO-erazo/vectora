@@ -68,10 +68,68 @@ function strokePolygon(lines, hw, join = 'miter', cap = 'butt', miterLimit = 4) 
 function shapeLines(el) {
   return pathSubsDoc(el).map(s => ({ pts: Boolean2D.flatten(s), closed: s.closed }));
 }
+/* borde desplazado de una polilínea hacia un lado (side = ±1), con uniones en las esquinas */
+function offsetSide(pts, closed, hw, side, join, miterLimit) {
+  const n = pts.length, out = [];
+  const dir = (a, b) => { const L = Geo.dist(a, b) || 1; return { x: (b.x - a.x) / L, y: (b.y - a.y) / L }; };
+  const nrm = d => ({ x: -d.y * side, y: d.x * side });
+  for (let i = 0; i < n; i++) {
+    const p = pts[i], hasPrev = closed || i > 0, hasNext = closed || i < n - 1;
+    const d1 = hasPrev ? dir(pts[(i - 1 + n) % n], p) : null, d2 = hasNext ? dir(p, pts[(i + 1) % n]) : null;
+    if (!d1 || !d2) { const m = nrm(d1 || d2); out.push({ x: p.x + m.x * hw, y: p.y + m.y * hw }); continue; }
+    const n1 = nrm(d1), n2 = nrm(d2), dot = d1.x * d2.x + d1.y * d2.y;
+    const sx = n1.x + n2.x, sy = n1.y + n2.y, sl = Math.hypot(sx, sy);
+    if (sl < 1e-9) { out.push({ x: p.x + n1.x * hw, y: p.y + n1.y * hw }); continue; }
+    if (dot > 0.985) { const k = Math.min(hw / (sl / 2), hw * miterLimit); out.push({ x: p.x + sx / sl * k, y: p.y + sy / sl * k }); continue; }
+    const outer = n1.x * d2.x + n1.y * d2.y < 0; /* el trazo gira alejándose de este lado */
+    const ml = hw / (sl / 2);
+    if (!outer) { out.push({ x: p.x + sx / sl * Math.min(ml, hw * 4), y: p.y + sy / sl * Math.min(ml, hw * 4) }); continue; }
+    if (join === 'round') {
+      const a1 = Math.atan2(n1.y, n1.x); let a2 = Math.atan2(n2.y, n2.x), da = a2 - a1;
+      while (da > Math.PI) da -= 2 * Math.PI; while (da < -Math.PI) da += 2 * Math.PI;
+      const k = Math.max(2, Math.ceil(Math.abs(da) / 0.25));
+      for (let s = 0; s <= k; s++) { const a = a1 + da * s / k; out.push({ x: p.x + Math.cos(a) * hw, y: p.y + Math.sin(a) * hw }); }
+    } else if (join === 'miter' && ml / hw <= miterLimit) out.push({ x: p.x + sx / sl * ml, y: p.y + sy / sl * ml });
+    else out.push({ x: p.x + n1.x * hw, y: p.y + n1.y * hw }, { x: p.x + n2.x * hw, y: p.y + n2.y * hw });
+  }
+  return out;
+}
+/* polígono del trazo construido con los bordes desplazados (más robusto que unir piezas) */
+function strokeOutline(lines, hw, join = 'miter', cap = 'butt', miterLimit = 4) {
+  const result = [];
+  const clean = ring => { const R = Boolean2D.op({ rings: [ring], rule: 'nonzero' }, { rings: [], rule: 'nonzero' }, 'union');
+    const a0 = Math.abs(signedArea(ring)), a1 = R.rings.reduce((s, r) => s + signedArea(r), 0);
+    return R.rings.length && Math.abs(Math.abs(a1) - a0) < a0 * 0.35 ? R.rings : [ring]; };
+  for (const { pts: raw, closed } of lines) {
+    const pts = raw.filter((p, i) => i === 0 || Geo.dist(p, raw[i - 1]) > 1e-6);
+    if (closed && pts.length > 1 && Geo.dist(pts[0], pts[pts.length - 1]) < 1e-6) pts.pop();
+    if (pts.length < 2) { if (pts.length === 1 && cap === 'round') result.push(circlePoly(pts[0], hw)); continue; }
+    const L = offsetSide(pts, closed, hw, 1, join, miterLimit), R = offsetSide(pts, closed, hw, -1, join, miterLimit);
+    if (closed) {
+      /* dos anillos: exterior e interior, con sentidos opuestos */
+      const [A, B] = Math.abs(signedArea(L)) > Math.abs(signedArea(R)) ? [L, R] : [R, L];
+      const outer = signedArea(A) < 0 ? A.reverse() : A, inner = signedArea(B) > 0 ? B.reverse() : B;
+      result.push(...clean(outer), inner);
+      continue;
+    }
+    const d0 = { x: pts[1].x - pts[0].x, y: pts[1].y - pts[0].y }, l0 = Math.hypot(d0.x, d0.y) || 1, e = pts.length - 1;
+    const d1 = { x: pts[e].x - pts[e - 1].x, y: pts[e].y - pts[e - 1].y }, l1 = Math.hypot(d1.x, d1.y) || 1;
+    const capPts = (p, d, l, from, to) => {
+      if (cap === 'square') return [{ x: from.x + d.x / l * hw, y: from.y + d.y / l * hw }, { x: to.x + d.x / l * hw, y: to.y + d.y / l * hw }];
+      if (cap === 'round') {
+        /* semicírculo de «from» a «to» pasando por la dirección del extremo */
+        const a1 = Math.atan2(from.y - p.y, from.x - p.x); let h = Math.atan2(d.y, d.x) - a1; while (h > Math.PI) h -= 2 * Math.PI; while (h < -Math.PI) h += 2 * Math.PI;
+        const out = []; for (let k = 1; k < 12; k++) { const a = a1 + 2 * h * k / 12; out.push({ x: p.x + Math.cos(a) * hw, y: p.y + Math.sin(a) * hw }); } return out;
+      }
+      return [];
+    };
+    const ring = [...L, ...capPts(pts[e], d1, l1, L[L.length - 1], R[R.length - 1]), ...R.reverse(), ...capPts(pts[0], { x: -d0.x, y: -d0.y }, l0, R[R.length - 1], L[0])];
+    result.push(...clean(signedArea(ring) < 0 ? ring.reverse() : ring));
+  }
+  return { rings: result, rule: 'nonzero' };
+}
 function outlinePoly(el, width) {
-  const hw = width / 2;
-  const sp = strokePolygon(shapeLines(el), hw, el.getAttribute('stroke-linejoin') || 'miter', el.getAttribute('stroke-linecap') || 'butt', +(el.getAttribute('stroke-miterlimit') || 4));
-  return Boolean2D.op(sp, { rings: [], rule: 'nonzero' }, 'union');
+  return strokeOutline(shapeLines(el), width / 2, el.getAttribute('stroke-linejoin') || 'miter', el.getAttribute('stroke-linecap') || 'butt', +(el.getAttribute('stroke-miterlimit') || 4));
 }
 
 const PathOps = {
@@ -150,7 +208,7 @@ const PathOps = {
     for (const el of sel) {
       const base = Boolean2D.fromSubs(pathSubsDoc(el).filter(s => s.closed), el.getAttribute('fill-rule') || 'nonzero');
       if (!base.rings.length) continue;
-      const band = strokePolygon(base.rings.map(r => ({ pts: r, closed: true })), Math.abs(d), v.join, 'butt', 8);
+      const band = strokeOutline(base.rings.map(r => ({ pts: r, closed: true })), Math.abs(d), v.join, 'butt', 8);
       const res = Boolean2D.op(base, band, d > 0 ? 'union' : 'difference');
       const p = svgEl('path', { id: uid(), ...styleAttrs(el), d: Boolean2D.toPath(res) });
       el.before(p); placeDocPath(p); out.push(p); /* como en Illustrator, el original se conserva encima */

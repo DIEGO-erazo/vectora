@@ -275,6 +275,8 @@ const MENUS = {
     ['Motivo ▸ Crear…', '', () => Patterns.create()], ['Motivo ▸ Editar motivo', '', () => Patterns.edit()], '-',
     ['Convertir en trazado', '', () => Actions.toPath()], ['Calco de imagen ▸ Crear y expandir…', '', () => Trace.dialog()],
     ['Repetir ▸ Radial', '', () => Repeat.make('radial')], ['Repetir ▸ Cuadrícula', '', () => Repeat.make('grid')], ['Repetir ▸ Espejo', '', () => Repeat.make('mirror')],
+    ['Entrelazar ▸ Crear', '', () => Intertwine.make()], ['Entrelazar ▸ Editar', '', () => Tools.use('intertwine')], ['Entrelazar ▸ Liberar', '', () => Intertwine.release()],
+    ['Máscara de opacidad ▸ Crear', '', () => OpMask.make()], ['Máscara de opacidad ▸ Editar', '', () => OpMask.edit()], ['Máscara de opacidad ▸ Liberar', '', () => OpMask.release()],
     ['Repetir ▸ Opciones…', '', () => Repeat.options()], ['Repetir ▸ Expandir', '', () => Repeat.expand()], ['Repetir ▸ Liberar', '', () => Repeat.release()], '-',
     ['Trazado ▸ Unir', 'Ctrl+J', () => PathOps.join()], ['Trazado ▸ Simplificar…', '', () => PathOps.simplify()],
     ['Trazado ▸ Contornear trazo', '', () => PathOps.outlineStroke()], ['Trazado ▸ Desplazar trazado…', '', () => PathOps.offsetPath()],
@@ -322,6 +324,7 @@ const MENUS = {
     ['Quitar efectos', '', () => Effects.clear()], ['Expandir apariencia', '', () => LiveFX.expand()],
   ],
   'Ver': [
+    ['Modo de dibujo ▸ Normal', '', () => DrawMode.set('normal'), () => DrawMode.mode === 'normal'], ['Modo de dibujo ▸ Detrás', '', () => DrawMode.set('behind'), () => DrawMode.mode === 'behind'], ['Modo de dibujo ▸ Dentro', '', () => DrawMode.set('inside'), () => DrawMode.mode === 'inside'], ['Modo de dibujo ▸ Alternar', 'Shift+D', () => DrawMode.cycle()],
     ['Rotar vista ▸ Herramienta Rotar vista', 'Shift+H', () => Tools.use('rotateview')], ['Rotar vista ▸ Restablecer rotación de vista', 'Shift+Escape', () => View.setRotation(0)], '-',
     ['Acercar', 'Ctrl+=', () => View.zoomAt(1.25)], ['Alejar', 'Ctrl+-', () => View.zoomAt(0.8)],
     ['Encajar mesa de trabajo en ventana', 'Ctrl+0', () => View.fit()], ['Encajar todas en la ventana', 'Ctrl+Alt+0', () => Artboards.fitAll()], ['Tamaño real', 'Ctrl+1', () => View.setZoom(1)], '-',

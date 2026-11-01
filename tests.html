@@ -164,6 +164,18 @@ test('Registro de imágenes: empaquetar y desempaquetar', () => {
   eq(ImageStore.unpack(packed), html); return `${html.length} → ${packed.length} caracteres`;
 });
 
+test('Contornear trazo de un círculo conserva el agujero (área del aro)', () => {
+  const pts = [...Array(256)].map((_, i) => ({ x: 50 * Math.cos(i / 256 * 2 * Math.PI), y: 50 * Math.sin(i / 256 * 2 * Math.PI) }));
+  const P = strokeOutline([{ pts, closed: true }], 5, 'miter', 'butt');
+  return near(Math.abs(P.rings.reduce((a, r) => a + signedArea(r), 0)), Math.PI * (55 * 55 - 45 * 45), 15);
+});
+test('Contornear trazo de una curva abierta no queda vacío', () => {
+  const pts = Boolean2D.flatten(PathData.parse('M0 0C50 -50 100 50 150 0')[0]);
+  const P = strokeOutline([{ pts, closed: false }], 5, 'miter', 'butt');
+  const a = Math.abs(P.rings.reduce((s, r) => s + signedArea(r), 0)); if (a < 1500 || a > 1800) throw new Error('área ' + a); return round(a, 1);
+});
+test('Extremo redondeado añade un semicírculo en cada punta', () => near(Math.abs(strokeOutline([{ pts: [{ x: 0, y: 0 }, { x: 100, y: 0 }], closed: false }], 5, 'miter', 'round').rings.reduce((s, r) => s + signedArea(r), 0)), 1000 + Math.PI * 25, 2));
+
 const out = $('out'); let pass = 0;
 for (const r of results) {
   if (r.ok) pass++;
