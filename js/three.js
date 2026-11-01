@@ -13,10 +13,15 @@ const Three = {
     return { x, y, z };
   },
   /* color de una cara según su normal (luz desde arriba a la izquierda, delante) */
-  shade(hex, n, light) {
-    const L = { x: -0.45, y: -0.6, z: 0.66 }, ln = Math.hypot(L.x, L.y, L.z), d = (n.x * L.x + n.y * L.y + n.z * L.z) / ln;
-    const k = 0.35 + 0.65 * Math.max(0, d) * light + 0.25 * (1 - light), c = hexToRgb(/^#[0-9a-f]{6}$/i.test(hex) ? hex : '#888888');
-    const hi = Math.max(0, d) ** 24 * 0.35 * light;
+  shade(hex, n, light, P = {}) {
+    const c = hexToRgb(/^#[0-9a-f]{6}$/i.test(hex) ? hex : '#888888');
+    if (P.surface === 'flat') return rgbToHex(c.r, c.g, c.b);
+    /* luz: dirección (azimut en el plano de la pantalla y altura) */
+    const az = (+(P.laz ?? 225)) * Math.PI / 180, el = (+(P.lel ?? 45)) * Math.PI / 180;
+    const L = { x: Math.cos(az) * Math.cos(el), y: Math.sin(az) * Math.cos(el), z: Math.sin(el) }, d = n.x * L.x + n.y * L.y + n.z * L.z;
+    const amb = clamp(+(P.amb ?? 35), 0, 100) / 100;
+    const k = amb + (1 - amb) * Math.max(0, d) * light + 0.2 * (1 - light);
+    const hi = P.surface === 'diffuse' ? 0 : Math.max(0, 2 * d * n.z - L.z) ** 20 * 0.45 * light;
     return rgbToHex(clamp(c.r * k + 255 * hi, 0, 255), clamp(c.g * k + 255 * hi, 0, 255), clamp(c.b * k + 255 * hi, 0, 255));
   },
   normal(f) {
@@ -74,7 +79,7 @@ const Three = {
       const rings = face.cap ? face.pts : [face.pts]; if (!rings.length || !rings[0].length) continue;
       const R = rings.map(r => r.map(proj)), n = this.normal(rings[0].map(q => this.rot(q, +P.rx || 0, +P.ry || 0, +P.rz || 0)));
       const z = R.flat().reduce((s, q) => s + q.z, 0) / R.flat().length;
-      out.push({ R, z, col: this.shade(P.fill, n.z < 0 ? { x: -n.x, y: -n.y, z: -n.z } : n, (+P.light || 70) / 100) });
+      out.push({ R, z, col: this.shade(P.fill, n.z < 0 ? { x: -n.x, y: -n.y, z: -n.z } : n, (+(P.light ?? 70)) / 100, P) });
     }
     out.sort((a, b) => a.z - b.z);
     g.querySelectorAll(':scope > path').forEach(e => e.remove());
@@ -88,6 +93,10 @@ const Three = {
       { id: 'rx', label: 'Rotación X (°)', type: 'number', value: P.rx ?? -18, step: 5 }, { id: 'ry', label: 'Rotación Y (°)', type: 'number', value: P.ry ?? -26, step: 5 },
       { id: 'rz', label: 'Rotación Z (°)', type: 'number', value: P.rz ?? 8, step: 5 }, { id: 'persp', label: 'Perspectiva (0–160°)', type: 'number', value: P.persp ?? 0, min: 0, max: 160, step: 10 },
       { id: 'light', label: 'Intensidad de la luz (%)', type: 'number', value: P.light ?? 70, min: 0, max: 100 },
+      { id: 'surface', label: 'Superficie', type: 'select', value: P.surface || 'plastic', options: [['plastic', 'Plástico (con brillo)'], ['diffuse', 'Mate'], ['flat', 'Sin sombreado']] },
+      { id: 'laz', label: 'Dirección de la luz (°)', type: 'number', value: P.laz ?? 225, step: 15, show: v => v.surface !== 'flat' },
+      { id: 'lel', label: 'Altura de la luz (°)', type: 'number', value: P.lel ?? 45, min: 0, max: 90, step: 5, show: v => v.surface !== 'flat' },
+      { id: 'amb', label: 'Luz ambiente (%)', type: 'number', value: P.amb ?? 35, min: 0, max: 100, show: v => v.surface !== 'flat' },
     ];
     if (kind === 'revolve') f.push({ id: 'angle', label: 'Ángulo (°)', type: 'number', value: P.angle ?? 360, min: 1, max: 360 }, { id: 'segs', label: 'Segmentos', type: 'number', value: P.segs ?? 32, min: 6, max: 96 },
       { id: 'side', label: 'Eje', type: 'select', value: P.side || 'left', options: [['left', 'Borde izquierdo'], ['right', 'Borde derecho']] });

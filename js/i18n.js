@@ -120,6 +120,7 @@ Extruir y biselar=Extrude & Bevel|Revolución=Revolve|Quitar 3D=Remove 3D|Rotaci
 Malla=Mesh|Malla de degradado=Gradient Mesh|Crear malla=Create Mesh|Liberar malla=Release Mesh|Color de malla=Mesh Color|Mover punto de malla=Move Mesh Point
 Perspectiva=Perspective|Cuadrícula de perspectiva=Perspective Grid|Mostrar cuadrícula=Show Grid|Herramienta Cuadrícula de perspectiva=Perspective Grid Tool|Adjuntar al plano activo=Attach to Active Plane|Adjuntar al plano izquierdo=Attach to Left Plane|Adjuntar al plano derecho=Attach to Right Plane|Rectángulo en perspectiva=Perspective Rectangle|Adjuntar a perspectiva=Attach to Perspective
 Adjuntar al suelo=Attach to Floor Plane|Plano de dibujo=Drawing plane|Automático=Automatic|Izquierdo=Left|Derecho=Right|Suelo=Floor
+Superficie=Surface|Plástico (con brillo)=Plastic Shading|Mate=Diffuse Shading|Sin sombreado=No Shading|Dirección de la luz (°)=Light Direction (°)|Altura de la luz (°)=Light Height (°)|Luz ambiente (%)=Ambient Light (%)
 Separación=Spacing|Mayúsculas=Caps|Pinceles=Brushes|Aplicar=Apply|Pantalla=Screen|Impresión=Print|Web=Web|Vídeo=Film & Video|Móvil=Mobile|Arte y dibujo=Art & Illustration
 `;
 
