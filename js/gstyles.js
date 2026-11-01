@@ -25,7 +25,7 @@ const GraphicStyles = {
     const g = (st.a.fill || '').match(/url\(\s*#([^)]+)\)/), gd = g && document.getElementById(g[1]);
     if (gd) st.grad = gd.outerHTML;
     const f = (el.getAttribute('filter') || '').match(/#([^)]+)/), F = f && document.getElementById(f[1]);
-    if (F && F.children.length) st.filter = F.innerHTML;
+    const fl = FilterFX.list(el); if (fl.length) st.filters = fl; else if (F && F.children.length) st.filter = F.innerHTML;
     const fx = LiveFX.list(leaf); if (fx.length) st.fx = fx;
     if (el.hasAttribute('opacity')) st.op = +el.getAttribute('opacity');
     if (el.style.mixBlendMode) st.blend = el.style.mixBlendMode;
@@ -59,7 +59,8 @@ const GraphicStyles = {
       for (const [k, v] of Object.entries(st.a)) setStyle([el], k, k === 'fill' && st.grad && /^url/.test(v) ? this.gradRef(st) : v);
       if (st.op != null && st.op !== 1) el.setAttribute('opacity', st.op); else el.removeAttribute('opacity');
       el.style.mixBlendMode = st.blend || ''; if (!el.getAttribute('style')) el.removeAttribute('style');
-      el.removeAttribute('filter');
+      el.removeAttribute('filter'); el.removeAttribute('data-filters');
+      if (st.filters) FilterFX.write(el, JSON.parse(JSON.stringify(st.filters)));
       if (st.filter) { const f = svgEl('filter', { id: uid('fx'), x: '-50%', y: '-50%', width: '200%', height: '200%' }, docDefs()); f.innerHTML = st.filter; el.setAttribute('filter', `url(#${f.id})`); }
       for (let s of shapes.filter(isShape)) {
         if (st.fx && st.fx.length) { s = LiveFX.prepare(s); LiveFX.write(s, JSON.parse(JSON.stringify(st.fx))); }

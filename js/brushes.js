@@ -149,7 +149,7 @@ function warpFn(style, b) {
       if (prop === 'stroke') { o.s = value || 'none'; s.setAttribute('fill', o.s); }
       else if (prop === 'fill') o.f = value || 'none';
       else o.w = +value || 1;
-      s.setAttribute('data-ostroke', JSON.stringify(o)); if (prop === 'stroke-width') LiveFX.render(s);
+      s.setAttribute('data-ostroke', JSON.stringify(o)); LiveFX.render(s);
     }
   };
   getStyle = function (el, prop) {

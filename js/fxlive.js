@@ -124,7 +124,7 @@ const Appearance = {
   },
   menu(btn) {
     const r = btn.getBoundingClientRect(), pop = $('menuPopup'); Menus.close(); Menus.openMenu = '__ap'; pop.innerHTML = '';
-    const items = [...Object.entries(FX).filter(([, f]) => !f.hidden).map(([k, f]) => [f.name + '…', () => (k === 'warp' ? Envelope.warp() : LiveFX.add(k))]), '-', ['Sombra paralela…', () => Effects.shadow()], ['Desenfoque gaussiano…', () => Effects.blur()]];
+    const items = [...Object.entries(FX).filter(([, f]) => !f.hidden).map(([k, f]) => [f.name + '…', () => (k === 'warp' ? Envelope.warp() : LiveFX.add(k))]), '-', ...Object.entries(FILTERS).map(([k, f]) => [f.name + '…', () => FilterFX.add(k)])];
     for (const it of items) {
       if (it === '-') { pop.insertAdjacentHTML('beforeend', '<div class="menu-sep"></div>'); continue; }
       const row = document.createElement('div'); row.className = 'menu-item'; row.innerHTML = `<span>${it[0]}</span><span></span>`;
@@ -146,12 +146,7 @@ const Appearance = {
       r.querySelector('.ap-name').onclick = r.querySelector('.ap-fx').onclick = () => LiveFX.edit(leaf, i);
       r.querySelector('.ap-del').onclick = () => LiveFX.remove(leaf, i);
     });
-    const filt = (el.getAttribute('filter') || '').match(/#([^)]+)/), F = filt && document.getElementById(filt[1]);
-    if (F) for (const prim of F.children) {
-      const r = row(`<span class="ap-eye">👁</span><span class="ap-name">${FILTER_NAMES[prim.tagName] || prim.tagName}</span><span class="ap-fx" title="Editar">fx</span><span class="ap-del" title="Quitar">✕</span>`, 'ap-effect');
-      r.querySelector('.ap-name').onclick = r.querySelector('.ap-fx').onclick = () => (prim.tagName === 'feDropShadow' ? Effects.shadow() : Effects.blur());
-      r.querySelector('.ap-del').onclick = () => { prim.remove(); if (!F.children.length) { el.removeAttribute('filter'); F.remove(); } History.named('Quitar efecto', () => History.commit()); Selection.changed(); };
-    }
+    FilterFX.rows(el, row);
     const sw = (c, stroke) => `<span class="ap-sw ${c === 'none' ? 'none' : ''} ${stroke ? 'stroke' : ''}" style="${c && c !== 'none' ? `background:${c.startsWith('url(') ? 'linear-gradient(90deg,#fff,#000)' : c}` : ''}"></span>`;
     const stroke = normColor(getStyle(leaf, 'stroke') || 'none'), fill = normColor(getStyle(leaf, 'fill') || '#000');
     const rs = row(`<span class="ap-label">Trazo</span>${sw(stroke, true)}<span class="ap-val">${stroke === 'none' ? '' : (+(getStyle(leaf, 'stroke-width') ?? 1)) + ' pt'}</span>`);
