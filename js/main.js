@@ -60,7 +60,7 @@
   });
 
   /* ---------- portapapeles del sistema y soltar archivos ---------- */
-  const typingNow = () => ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement && document.activeElement.tagName) || Dialog.isOpen;
+  const typingNow = () => ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement && document.activeElement.tagName) || (document.activeElement && document.activeElement.isContentEditable) || Dialog.isOpen;
   document.addEventListener('copy', e => {
     if (typingNow() || !App.selection.length) return;
     Actions.copy(); e.clipboardData.setData('text/plain', App.clipboardText); e.preventDefault();
@@ -97,7 +97,7 @@
     if (Dialog.isOpen) return;
     if (Home.visible && !(ev.ctrlKey || ev.metaKey)) return; /* en la pantalla de inicio solo valen los atajos de menú */
     const tag = document.activeElement && document.activeElement.tagName;
-    const typing = ['INPUT', 'TEXTAREA', 'SELECT'].includes(tag);
+    const typing = ['INPUT', 'TEXTAREA', 'SELECT'].includes(tag) || (document.activeElement && document.activeElement.isContentEditable);
     if (typing) { if (ev.key === 'Escape') document.activeElement.blur(); return; }
     if (ev.key === 'F1') { ev.preventDefault(); Dialog.alert(HELP_TEXT, 'Atajos de teclado'); return; }
     /* Ctrl+C / X / V se dejan pasar para usar el portapapeles del sistema */
