@@ -344,3 +344,15 @@ App.tools.rotateview = {
 ICONS.rotateview = '<path d="M5 12a7 7 0 1 0 2-5"/><path d="M4 4v4h4"/><rect x="9" y="9" width="6" height="6" transform="rotate(20 12 12)"/>';
 TOOL_INFO.rotateview = ['Rotar vista', 'Mayús+H'];
 TOOL_GROUPS.find(g => Array.isArray(g) && g.includes('hand')).push('rotateview');
+
+/* con la vista girada, el editor de texto gira con el lienzo (alrededor de su centro) */
+(() => {
+  const base = TextTool.styleEditor.bind(TextTool);
+  TextTool.styleEditor = function (...a) {
+    base(...a);
+    const ed = $('textEditor'), rot = App.view.rot || 0;
+    if (!rot) { ed.style.transform = ''; return; }
+    const r = View.stageRect(), left = parseFloat(ed.style.left) || 0, top = parseFloat(ed.style.top) || 0;
+    ed.style.transformOrigin = `${r.width / 2 - left}px ${r.height / 2 - top}px`; ed.style.transform = `rotate(${rot}deg)`;
+  };
+})();

@@ -22,9 +22,13 @@ Shaper, Entrelazar, Licuar, filtros apilables (resplandores, desvanecer, grano),
 Garabato en vivo, herramientas de símbolos, Acciones, espacios de trabajo, 3D, malla de degradado, cuadrícula de
 perspectiva y formato por rangos en el texto.
 
-Pendiente para versiones futuras: separación de colores real en PDF (las tintas planas se exportan como RGB),
-plano de suelo en la perspectiva, curvas en las líneas de la malla, materiales y luces en 3D, firma de código de
-los instaladores y actualización automática en segundo plano.
+Mejoras posteriores: el texto con formato fluye entre cuadros enlazados, la perspectiva tiene plano de suelo,
+la malla de degradado usa líneas curvas suaves, el 3D tiene dirección de luz y tipos de superficie, y el editor
+de texto gira con la vista.
+
+Pendiente para versiones futuras: separación de colores real en PDF (las tintas planas se exportan como RGB);
+máscaras, filtros y mallas en el PDF vectorial (se ven en SVG y PNG); firma de código de los instaladores y
+actualización automática en segundo plano.
 
 ## 1. Dónde estamos
 
