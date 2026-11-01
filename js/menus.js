@@ -275,6 +275,7 @@ const MENUS = {
     ['Motivo ▸ Crear…', '', () => Patterns.create()], ['Motivo ▸ Editar motivo', '', () => Patterns.edit()], '-',
     ['Convertir en trazado', '', () => Actions.toPath()], ['Calco de imagen ▸ Crear y expandir…', '', () => Trace.dialog()],
     ['Repetir ▸ Radial', '', () => Repeat.make('radial')], ['Repetir ▸ Cuadrícula', '', () => Repeat.make('grid')], ['Repetir ▸ Espejo', '', () => Repeat.make('mirror')],
+    ['Perspectiva ▸ Adjuntar al plano activo', '', () => Persp.attach()], ['Perspectiva ▸ Adjuntar al plano izquierdo', '', () => Persp.attach(-1)], ['Perspectiva ▸ Adjuntar al plano derecho', '', () => Persp.attach(1)],
     ['Malla de degradado ▸ Crear', '', () => { const s = App.selection.find(isShape); if (s) { Selection.set([Mesh.create(s)]); History.named('Crear malla', () => History.commit()); Tools.use('mesh'); } }], ['Malla de degradado ▸ Liberar', '', () => Mesh.release()],
     ['Entrelazar ▸ Crear', '', () => Intertwine.make()], ['Entrelazar ▸ Editar', '', () => Tools.use('intertwine')], ['Entrelazar ▸ Liberar', '', () => Intertwine.release()],
     ['Máscara de opacidad ▸ Crear', '', () => OpMask.make()], ['Máscara de opacidad ▸ Editar', '', () => OpMask.edit()], ['Máscara de opacidad ▸ Liberar', '', () => OpMask.release()],
@@ -329,6 +330,7 @@ const MENUS = {
     ['Quitar efectos', '', () => Effects.clear()], ['Expandir apariencia', '', () => LiveFX.expand()],
   ],
   'Ver': [
+    ['Cuadrícula de perspectiva ▸ Mostrar cuadrícula', 'Ctrl+Shift+I', () => Persp.toggle(), () => Persp.visible], ['Cuadrícula de perspectiva ▸ Herramienta Cuadrícula de perspectiva', 'Shift+P', () => Tools.use('perspective')],
     ['Modo de dibujo ▸ Normal', '', () => DrawMode.set('normal'), () => DrawMode.mode === 'normal'], ['Modo de dibujo ▸ Detrás', '', () => DrawMode.set('behind'), () => DrawMode.mode === 'behind'], ['Modo de dibujo ▸ Dentro', '', () => DrawMode.set('inside'), () => DrawMode.mode === 'inside'], ['Modo de dibujo ▸ Alternar', 'Shift+D', () => DrawMode.cycle()],
     ['Rotar vista ▸ Herramienta Rotar vista', 'Shift+H', () => Tools.use('rotateview')], ['Rotar vista ▸ Restablecer rotación de vista', 'Shift+Escape', () => View.setRotation(0)], '-',
     ['Acercar', 'Ctrl+=', () => View.zoomAt(1.25)], ['Alejar', 'Ctrl+-', () => View.zoomAt(0.8)],
