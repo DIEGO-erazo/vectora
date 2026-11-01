@@ -115,7 +115,7 @@ const RT = {
   const baseLayout = TextLayout.layoutArea.bind(TextLayout);
   TextLayout.layoutArea = function (el, txt) {
     const runs = RT.get(el);
-    if (!runs || runs.map(r => r.t).join('') !== txt || Thread.prev(el) || Thread.next(el)) {
+    if (!runs || runs.map(r => r.t).join('') !== txt) {
       if (runs && runs.map(r => r.t).join('') !== txt) el.removeAttribute('data-runs');
       return baseLayout(el, txt);
     }
@@ -125,8 +125,9 @@ const RT = {
     const wOf = (s, r) => { ctx.font = fontOf(r); return ctx.measureText(s).width; };
     el.setAttribute('data-text', txt); el.textContent = '';
     const x0 = a.x + P.li, x1 = a.x + a.width - P.ri, bottom = a.y + a.height;
-    let y = a.y, first = true, over = false;
-    for (const [pi, segs] of RT.lines(runs).entries()) {
+    let y = a.y, first = true, over = false, rest = null;
+    const paras = RT.lines(runs);
+    for (const [pi, segs] of paras.entries()) {
       if (pi) y += P.sb;
       /* palabras con sus trozos de estilo */
       const words = []; let cur = [];
@@ -139,7 +140,13 @@ const RT = {
       for (const [i, ln] of lines.entries()) {
         const big = Math.max(size, ...ln.flat().map(p => p.sz || size));
         y += first ? big * 0.9 : big * leadPct;
-        if (!first && y + big * 0.25 > bottom) { over = true; break; }
+        if (!first && y + big * 0.25 > bottom) {
+          /* lo que no cabe, con su formato, pasa al cuadro siguiente */
+          over = true; const left = lines.slice(i).flat().length ? lines.slice(i) : [];
+          rest = []; left.forEach((l, li) => l.forEach((w, k) => { if (li || k) rest.push({ ...w[0], t: ' ' }); rest.push(...w); }));
+          paras.slice(pi + 1).forEach(ps => { rest.push({ t: String.fromCharCode(10) }); rest.push(...ps); });
+          break;
+        }
         first = false;
         const L = x0 + (i === 0 ? P.fi : 0), W = ln.reduce((s, w, k) => s + ww(w) + (k ? sp(w[0]) : 0), 0);
         const x = P.align === 'center' ? (L + x1 - W) / 2 : P.align === 'right' ? x1 - W : L;
@@ -154,7 +161,12 @@ const RT = {
     }
     el.removeAttribute('text-anchor');
     const f = el.querySelector('tspan'); if (f) { el.setAttribute('x', f.getAttribute('x')); el.setAttribute('y', f.getAttribute('y')); }
-    el.toggleAttribute('data-overflow', over);
+    el.toggleAttribute('data-overflow', over && !!rest && rest.some(r => r.t.trim()));
+    /* cuadros enlazados: cada uno guarda sus tramos */
+    const n = Thread.next(el), merged = [];
+    for (const r of rest || []) { const last = merged[merged.length - 1]; if (last && RT.same(last, r)) last.t += r.t; else merged.push({ ...r }); }
+    if (n) { if (merged.length) n.setAttribute('data-runs', JSON.stringify(merged)); else n.removeAttribute('data-runs'); this.layoutArea(n, merged.map(r => r.t).join('')); }
+    if (Thread.prev(el)) el.removeAttribute('data-text');
   };
   /* cambiar el texto desde fuera (buscar y reemplazar…) quita el formato por rangos */
   const baseSet = TextLayout.setText.bind(TextLayout);
