@@ -13,8 +13,17 @@ const Mesh = {
     const g = svgEl('g', { id: uid('mesh'), 'data-name': 'Malla de degradado' }); s.before(g); s.remove(); placeDocPath(g);
     g.setAttribute('data-mesh', JSON.stringify(M)); this.render(g); return g;
   },
-  /* punto de la celda (i, j) en (u, v) por interpolación bilineal */
+  /* punto de la celda (i, j) en (u, v): superficie suave (Catmull-Rom) que pasa por los puntos,
+     así las líneas de la malla se curvan al mover un punto, como en Illustrator */
   at(M, i, j, u, v) {
+    const R = M.P.length, C = M.P[0].length, P = (r, c) => M.P[clamp(r, 0, R - 1)][clamp(c, 0, C - 1)];
+    const cr = (p0, p1, p2, p3, t) => { const t2 = t * t, t3 = t2 * t; return 0.5 * (2 * p1 + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 + (-p0 + 3 * p1 - 3 * p2 + p3) * t3); };
+    const row = r => { const a = P(r, j - 1), b = P(r, j), c = P(r, j + 1), d = P(r, j + 2); return { x: cr(a.x, b.x, c.x, d.x, u), y: cr(a.y, b.y, c.y, d.y, u) }; };
+    const q0 = row(i - 1), q1 = row(i), q2 = row(i + 1), q3 = row(i + 2);
+    return { x: cr(q0.x, q1.x, q2.x, q3.x, v), y: cr(q0.y, q1.y, q2.y, q3.y, v) };
+  },
+  /* versión bilineal (la usa el muestreo rápido de la imagen) */
+  atLinear(M, i, j, u, v) {
     const a = M.P[i][j], b = M.P[i][j + 1], c = M.P[i + 1][j + 1], d = M.P[i + 1][j];
     return { x: (1 - u) * (1 - v) * a.x + u * (1 - v) * b.x + u * v * c.x + (1 - u) * v * d.x, y: (1 - u) * (1 - v) * a.y + u * (1 - v) * b.y + u * v * c.y + (1 - u) * v * d.y };
   },
@@ -58,11 +67,15 @@ const Mesh = {
       const a = M.P[i][j], b = M.P[i][j + 1], c = M.P[i + 1][j + 1], d = M.P[i + 1][j];
       const C = [M.C[i][j], M.C[i][j + 1], M.C[i + 1][j + 1], M.C[i + 1][j]].map(hexToRgb);
       const nu = clamp(Math.ceil(Math.max(Geo.dist(a, b), Geo.dist(d, c)) * k * 2), 2, 4000), nv = clamp(Math.ceil(Math.max(Geo.dist(a, d), Geo.dist(b, c)) * k * 2), 2, 4000);
+      /* posiciones de la superficie suave en una red gruesa; dentro, bilineal (rápido) */
+      const G = 16, grid = []; for (let gy = 0; gy <= G; gy++) { const r = []; for (let gx = 0; gx <= G; gx++) r.push(this.at(M, i, j, gx / G, gy / G)); grid.push(r); }
       for (let y = 0; y <= nv; y++) {
-        const v = y / nv, V = sm(v);
+        const v = y / nv, V = sm(v), gy = Math.min(G - 1, Math.floor(v * G)), fv = v * G - gy;
         for (let x = 0; x <= nu; x++) {
-          const u = x / nu, U = sm(u), w0 = (1 - u) * (1 - v), w1 = u * (1 - v), w2 = u * v, w3 = (1 - u) * v;
-          const px = Math.floor(((w0 * a.x + w1 * b.x + w2 * c.x + w3 * d.x) - sb.x) * k), py = Math.floor(((w0 * a.y + w1 * b.y + w2 * c.y + w3 * d.y) - sb.y) * k);
+          const u = x / nu, U = sm(u), gx = Math.min(G - 1, Math.floor(u * G)), fu = u * G - gx;
+          const A = grid[gy][gx], B = grid[gy][gx + 1], Cc = grid[gy + 1][gx + 1], Dd = grid[gy + 1][gx];
+          const w0 = (1 - fu) * (1 - fv), w1 = fu * (1 - fv), w2 = fu * fv, w3 = (1 - fu) * fv;
+          const px = Math.floor(((w0 * A.x + w1 * B.x + w2 * Cc.x + w3 * Dd.x) - sb.x) * k), py = Math.floor(((w0 * A.y + w1 * B.y + w2 * Cc.y + w3 * Dd.y) - sb.y) * k);
           if (px < 0 || py < 0 || px >= W || py >= H) continue;
           const q0 = (1 - U) * (1 - V), q1 = U * (1 - V), q2 = U * V, q3 = (1 - U) * V, o = (py * W + px) * 4;
           D[o] = C[0].r * q0 + C[1].r * q1 + C[2].r * q2 + C[3].r * q3; D[o + 1] = C[0].g * q0 + C[1].g * q1 + C[2].g * q2 + C[3].g * q3;
@@ -127,8 +140,10 @@ App.tools.mesh = {
   overlay(g) {
     const m = Mesh.of(App.selection[0]); if (!m) return; const M = Mesh.get(m); if (!M) return;
     const S = q => View.docToStage(q.x, q.y);
-    for (const r of M.P) svgEl('polyline', { points: r.map(S).map(s => `${s.x},${s.y}`).join(' '), fill: 'none', stroke: '#1e90ff' }, g);
-    for (let j = 0; j < M.P[0].length; j++) svgEl('polyline', { points: M.P.map(r => S(r[j])).map(s => `${s.x},${s.y}`).join(' '), fill: 'none', stroke: '#1e90ff' }, g);
+    const R = M.P.length, C = M.P[0].length, K = 12, pts = [];
+    for (let i = 0; i < R; i++) { const L = []; for (let j = 0; j < C - 1; j++) for (let k = 0; k <= K; k++) L.push(S(Mesh.at(M, Math.min(i, R - 2), j, k / K, i === R - 1 ? 1 : 0))); pts.push(L); }
+    for (let j = 0; j < C; j++) { const L = []; for (let i = 0; i < R - 1; i++) for (let k = 0; k <= K; k++) L.push(S(Mesh.at(M, i, Math.min(j, C - 2), j === C - 1 ? 1 : 0, k / K))); pts.push(L); }
+    for (const L of pts) svgEl('polyline', { points: L.map(s => `${s.x},${s.y}`).join(' '), fill: 'none', stroke: '#1e90ff' }, g);
     M.P.forEach((r, i) => r.forEach((q, j) => { const s = S(q), on = this.sel && this.sel[0] === i && this.sel[1] === j; svgEl('rect', { x: s.x - 3.5, y: s.y - 3.5, width: 7, height: 7, transform: `rotate(45 ${s.x} ${s.y})`, fill: on ? '#1e90ff' : M.C[i][j], stroke: on ? '#fff' : '#1e90ff' }, g); }));
   },
   activate() { this.sel = null; $('sbHint').textContent = 'Malla: clic en una forma para crear la malla o añadir líneas · elige un punto y un color · arrastra los puntos'; },
