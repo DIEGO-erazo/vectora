@@ -117,6 +117,7 @@ Resplandor exterior=Outer Glow|Resplandor interior=Inner Glow|Desvanecer=Feather
 Acciones=Actions|Grabar una acción nueva / detener=Record new action / stop|Reproducir la acción seleccionada=Play selected action|Eliminar acción=Delete Action|Opciones de acción=Action Options|Incluir este paso=Include this step|Quitar paso=Delete step|Copia desplazada 10 px=Offset copy 10 px
 Espacio de trabajo=Workspace|Esenciales=Essentials|Tipografía=Typography|Pintura=Painting|Diseño=Layout|Restablecer=Reset|Nuevo espacio de trabajo=New Workspace|Administrar espacios de trabajo=Manage Workspaces|Arrastra para sacar el panel del dock (o devolverlo)=Drag to undock the panel (or dock it back)
 Extruir y biselar=Extrude & Bevel|Revolución=Revolve|Quitar 3D=Remove 3D|Rotación X (°)=X Rotation (°)|Rotación Y (°)=Y Rotation (°)|Rotación Z (°)=Z Rotation (°)|Perspectiva (0–160°)=Perspective (0–160°)|Intensidad de la luz (%)=Light Intensity (%)|Segmentos=Segments|Borde izquierdo=Left Edge|Borde derecho=Right Edge|Profundidad de extrusión (px)=Extrude Depth (px)|Bisel (px)=Bevel (px)|Opciones de revolución 3D=3D Revolve Options|Opciones de extrusión y bisel 3D=3D Extrude & Bevel Options|Extrusión 3D=3D Extrude|Revolución 3D=3D Revolve
+Malla=Mesh|Malla de degradado=Gradient Mesh|Crear malla=Create Mesh|Liberar malla=Release Mesh|Color de malla=Mesh Color|Mover punto de malla=Move Mesh Point
 Separación=Spacing|Mayúsculas=Caps|Pinceles=Brushes|Aplicar=Apply|Pantalla=Screen|Impresión=Print|Web=Web|Vídeo=Film & Video|Móvil=Mobile|Arte y dibujo=Art & Illustration
 `;
 
