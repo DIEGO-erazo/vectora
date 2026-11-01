@@ -27,7 +27,7 @@ la malla de degradado usa líneas curvas suaves, el 3D tiene dirección de luz y
 de texto gira con la vista.
 
 Pendiente para versiones futuras: separación de colores real en PDF (las tintas planas se exportan como RGB);
-máscaras, filtros y mallas en el PDF vectorial (se ven en SVG y PNG); firma de código de los instaladores y
+comprobar cómo salen las máscaras, los filtros y las mallas en el PDF vectorial (la librería svg2pdf no admite todos los filtros SVG); firma de código de los instaladores y
 actualización automática en segundo plano.
 
 ## 1. Dónde estamos
