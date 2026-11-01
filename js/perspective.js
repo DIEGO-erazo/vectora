@@ -17,8 +17,33 @@ const Persp = {
     const G = this.get(), V = { x: side < 0 ? G.vl : G.vr, y: G.horizon }, base = { x: G.x0, y: G.ground - v }, t = this.t(Math.max(0, u), side);
     return { x: base.x + (V.x - base.x) * t, y: base.y + (V.y - base.y) * t };
   },
-  /* plano bajo un punto del documento */
-  sideAt(p) { return p.x < this.get().x0 ? -1 : 1; },
+  /* intersección de dos rectas (a→b y c→d) */
+  cross(a, b, c, d) { const r = { x: b.x - a.x, y: b.y - a.y }, s = { x: d.x - c.x, y: d.y - c.y }, den = r.x * s.y - r.y * s.x || 1e-9, t = ((c.x - a.x) * s.y - (c.y - a.y) * s.x) / den; return { x: a.x + r.x * t, y: a.y + r.y * t }; },
+  /* punto de cualquier plano: -1 izquierdo, 1 derecho (u profundidad, v altura) y 0 suelo (u hacia la derecha, v hacia la izquierda) */
+  plane(side, u, v) {
+    if (side) return this.pt(side, u, v);
+    /* el suelo se extiende hacia el observador, delante de la arista: profundidades negativas en las bases */
+    const G = this.get(), A = this.base(-1, -Math.max(0, v)), B = this.base(1, -Math.max(0, u));
+    return this.cross(A, { x: G.vr, y: G.horizon }, B, { x: G.vl, y: G.horizon });
+  },
+  /* punto de la arista de base a una profundidad d (negativa: delante de la esquina) */
+  base(side, d) {
+    const G = this.get(), V = { x: side < 0 ? G.vl : G.vr, y: G.horizon }, D = Math.abs(V.x - G.x0) * 0.9, dd = Math.max(d, -0.9 * D), t = dd / (dd + D);
+    return { x: G.x0 + (V.x - G.x0) * t, y: G.ground + (V.y - G.ground) * t };
+  },
+  invPlane(side, p) {
+    if (side) return this.inv(side, p);
+    const G = this.get(), O = { x: G.x0, y: G.ground }, VL = { x: G.vl, y: G.horizon }, VR = { x: G.vr, y: G.horizon };
+    const depth = (V, q, D) => { const vx = V.x - O.x, vy = V.y - O.y, t = Math.min(0.98, ((q.x - O.x) * vx + (q.y - O.y) * vy) / (vx * vx + vy * vy)); return t * D / (1 - t); };
+    const qR = this.cross(VL, p, O, VR), qL = this.cross(VR, p, O, VL);
+    return { u: Math.max(0, -depth(VR, qR, Math.abs(G.vr - G.x0) * 0.9)), v: Math.max(0, -depth(VL, qL, Math.abs(G.vl - G.x0) * 0.9)) };
+  },
+  /* plano bajo un punto del documento (por debajo de las aristas de base: el suelo) */
+  sideAt(p) {
+    const G = this.get(), pref = App.perspPlane || 'auto'; if (pref !== 'auto') return +pref;
+    const left = p.x < G.x0, V = left ? G.vl : G.vr, baseY = G.ground + (G.horizon - G.ground) * clamp((p.x - G.x0) / (V - G.x0), 0, 1);
+    return p.y > baseY + 1 ? 0 : left ? -1 : 1;
+  },
   /* coordenadas del plano (inversa aproximada) de un punto del documento */
   inv(side, p) {
     const G = this.get(), V = { x: side < 0 ? G.vl : G.vr, y: G.horizon }, D = Math.abs(V.x - G.x0) * 0.9;
@@ -35,6 +60,10 @@ const Persp = {
       for (let u = 0; u <= far; u += G.cell) line(this.pt(side, u, 0), this.pt(side, u, (G.ground - G.horizon) * 2.2), col + '88');
       for (let v = 0; v <= (G.ground - G.horizon) * 2.2; v += G.cell) line(this.pt(side, 0, v), this.pt(side, far, v), col + '88');
     }
+    /* suelo */
+    const fl = 0.5 * 0.9 * Math.min(Math.abs(G.vr - G.x0), Math.abs(G.vl - G.x0));
+    for (let u = 0; u <= fl; u += G.cell) line(this.plane(0, u, 0), this.plane(0, u, fl), '#4f8cff66');
+    for (let v = 0; v <= fl; v += G.cell) line(this.plane(0, 0, v), this.plane(0, fl, v), '#4f8cff66');
     line({ x: G.x0, y: G.ground }, { x: G.x0, y: G.ground - (G.ground - G.horizon) * 2.2 }, '#222', 1.5);
     const dot = (q, c) => { const s = S(q); svgEl('circle', { cx: s.x, cy: s.y, r: 6, fill: c, stroke: '#fff', 'stroke-width': 1.5 }, g); };
     dot({ x: G.vl, y: G.horizon }, '#3fb76b'); dot({ x: G.vr, y: G.horizon }, '#e8743b'); dot({ x: G.x0, y: G.ground }, '#222'); dot({ x: G.x0, y: G.horizon }, '#6c6cff');
@@ -45,9 +74,9 @@ const Persp = {
     const els = App.selection.flatMap(e => (e.tagName === 'g' ? leafShapes(e) : [e])).filter(isShape); if (!els.length) return Dialog.alert('Selecciona trazados o formas (los textos, conviértelos antes en contornos).');
     const G = this.get(), made = [];
     for (const s of els) {
-      const b = Geo.bbox(s), side = sideWanted || (b.x + b.width / 2 < G.x0 ? -1 : 1);
+      const b = Geo.bbox(s), side = sideWanted != null ? sideWanted : (b.x + b.width / 2 < G.x0 ? -1 : 1);
       const subs = subdivideCurves(pathSubsDoc(s), 3).map(sub => ({ closed: sub.closed, nodes: sub.nodes }));
-      const T = q => q && this.map(side, q, G);
+      const T = q => q && (side ? this.map(side, q, G) : this.plane(0, q.x - b.x, b.y + b.height - q.y));
       subs.forEach(sub => sub.nodes.forEach(n => { const q = T(n); n.hin = T(n.hin); n.hout = T(n.hout); n.x = q.x; n.y = q.y; }));
       made.push(replaceWithPath(s, subs, styleAttrs(s)));
     }
@@ -56,13 +85,15 @@ const Persp = {
 };
 App.tools.perspective = {
   cursor: 'crosshair',
+  options() { const v = App.perspPlane || 'auto'; return `Plano de dibujo <select id="optPlane">${[['auto', 'Automático'], ['-1', 'Izquierdo'], ['1', 'Derecho'], ['0', 'Suelo']].map(([k, n]) => `<option value="${k}" ${k === v ? 'selected' : ''}>${n}</option>`).join('')}</select>`; },
+  bindOptions() { $('optPlane').onchange = e => { App.perspPlane = e.target.value; }; },
   activate() { Persp.visible = true; Persp.get(); $('sbHint').textContent = 'Perspectiva: arrastra los puntos de fuga, el horizonte o el suelo · arrastra sobre un plano para dibujar un rectángulo'; Selection.draw(); },
   deactivate() { $('sbHint').textContent = ''; },
   handles() { const G = Persp.get(); return [['vl', { x: G.vl, y: G.horizon }], ['vr', { x: G.vr, y: G.horizon }], ['ground', { x: G.x0, y: G.ground }], ['horizon', { x: G.x0, y: G.horizon }]]; },
   down(p, ev, sp) {
     const h = this.handles().find(([, q]) => Geo.dist(View.docToStage(q.x, q.y), sp) < 9);
     if (h) { this.drag = { k: h[0], p0: p, G0: { ...Persp.get() } }; return; }
-    this.rect = { side: Persp.sideAt(p), a: Persp.inv(Persp.sideAt(p), p), b: null };
+    const side = Persp.sideAt(p); this.rect = { side, a: Persp.invPlane(side, p), b: null };
   },
   move(p) {
     if (this.drag) {
@@ -73,11 +104,11 @@ App.tools.perspective = {
       else { G.ground = Math.max(d.G0.ground + dy, G.horizon + 10); G.x0 = d.G0.x0 + dx; }
       Selection.draw(); return;
     }
-    if (this.rect) { this.rect.b = Persp.inv(this.rect.side, p); Selection.draw(); }
+    if (this.rect) { this.rect.b = Persp.invPlane(this.rect.side, p); Selection.draw(); }
   },
   quad(r) {
     const u0 = Math.min(r.a.u, r.b.u), u1 = Math.max(r.a.u, r.b.u), v0 = Math.min(r.a.v, r.b.v), v1 = Math.max(r.a.v, r.b.v);
-    return [Persp.pt(r.side, u0, v0), Persp.pt(r.side, u1, v0), Persp.pt(r.side, u1, v1), Persp.pt(r.side, u0, v1)];
+    return [Persp.plane(r.side, u0, v0), Persp.plane(r.side, u1, v0), Persp.plane(r.side, u1, v1), Persp.plane(r.side, u0, v1)];
   },
   up() {
     if (this.drag) { this.drag = null; History.named('Cuadrícula de perspectiva', () => History.commit()); return; }

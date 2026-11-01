@@ -275,7 +275,7 @@ const MENUS = {
     ['Motivo ▸ Crear…', '', () => Patterns.create()], ['Motivo ▸ Editar motivo', '', () => Patterns.edit()], '-',
     ['Convertir en trazado', '', () => Actions.toPath()], ['Calco de imagen ▸ Crear y expandir…', '', () => Trace.dialog()],
     ['Repetir ▸ Radial', '', () => Repeat.make('radial')], ['Repetir ▸ Cuadrícula', '', () => Repeat.make('grid')], ['Repetir ▸ Espejo', '', () => Repeat.make('mirror')],
-    ['Perspectiva ▸ Adjuntar al plano activo', '', () => Persp.attach()], ['Perspectiva ▸ Adjuntar al plano izquierdo', '', () => Persp.attach(-1)], ['Perspectiva ▸ Adjuntar al plano derecho', '', () => Persp.attach(1)],
+    ['Perspectiva ▸ Adjuntar al plano activo', '', () => Persp.attach()], ['Perspectiva ▸ Adjuntar al plano izquierdo', '', () => Persp.attach(-1)], ['Perspectiva ▸ Adjuntar al plano derecho', '', () => Persp.attach(1)], ['Perspectiva ▸ Adjuntar al suelo', '', () => Persp.attach(0)],
     ['Malla de degradado ▸ Crear', '', () => { const s = App.selection.find(isShape); if (s) { Selection.set([Mesh.create(s)]); History.named('Crear malla', () => History.commit()); Tools.use('mesh'); } }], ['Malla de degradado ▸ Liberar', '', () => Mesh.release()],
     ['Entrelazar ▸ Crear', '', () => Intertwine.make()], ['Entrelazar ▸ Editar', '', () => Tools.use('intertwine')], ['Entrelazar ▸ Liberar', '', () => Intertwine.release()],
     ['Máscara de opacidad ▸ Crear', '', () => OpMask.make()], ['Máscara de opacidad ▸ Editar', '', () => OpMask.edit()], ['Máscara de opacidad ▸ Liberar', '', () => OpMask.release()],
