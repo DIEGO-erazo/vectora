@@ -5,7 +5,7 @@
   Object.assign(App.els, { stage: $('stage'), viewport: $('viewport'), content: $('content'), overlay: $('overlay'), artboard: $('artboard') });
   document.documentElement.classList.add('booting'); /* sin interacción hasta recuperar el autoguardado */
   Tools.build(); Menus.build(); Panels.init(); Rulers.init();
-  Dock.init(); TransformPanel.init(); PropsPanel.init(); HistoryPanel.init(); ArtboardsPanel.init(); TaskBar.init(); Align.initUI(); initRulerOrigin(); LayersPanel.init(); Symbols.init(); Patterns.init(); Appearance.init(); GraphicStyles.init(); Typo.init(); Brushes.init(); ColorX.init(); Repeat.init(); Navigator.init(); InfoPanel.init(); OpMask.init(); DrawMode.init(); ActionsPanel.init(); Prefs.load(); Lang.init();
+  Dock.init(); TransformPanel.init(); PropsPanel.init(); HistoryPanel.init(); ArtboardsPanel.init(); TaskBar.init(); Align.initUI(); initRulerOrigin(); LayersPanel.init(); Symbols.init(); Patterns.init(); Appearance.init(); GraphicStyles.init(); Typo.init(); Brushes.init(); ColorX.init(); Repeat.init(); Navigator.init(); InfoPanel.init(); OpMask.init(); DrawMode.init(); ActionsPanel.init(); Workspace.init(); Prefs.load(); Lang.init();
 
   const session = await IO.restore();
   Tools.use('select');

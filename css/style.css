@@ -488,3 +488,9 @@ input[type=range]{height:12px;accent-color:var(--accent)}
 .act-step.off span{text-decoration:line-through}
 .act-step button{background:none;border:0;color:var(--dim);cursor:pointer}
 #actRec.on{color:#ff6b6b}
+/* paneles flotantes */
+.pg-grip{display:flex;align-items:center;padding:0 5px;color:var(--dim);cursor:grab;font-size:12px;flex:none;touch-action:none}
+.pg-grip:hover{color:var(--hi)}
+.pgroup.pg-float{position:fixed;z-index:60;max-height:70vh;background:var(--bg2);border:1px solid var(--edge);box-shadow:0 10px 30px rgba(0,0,0,.45);border-radius:3px;overflow:hidden}
+.pgroup.pg-float .pg-body{overflow:auto}
+.pgroup.pg-drop{outline:2px solid var(--accent)}
