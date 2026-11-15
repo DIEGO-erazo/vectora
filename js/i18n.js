@@ -122,9 +122,12 @@ Perspectiva=Perspective|Cuadrícula de perspectiva=Perspective Grid|Mostrar cuad
 Adjuntar al suelo=Attach to Floor Plane|Plano de dibujo=Drawing plane|Automático=Automatic|Izquierdo=Left|Derecho=Right|Suelo=Floor
 Superficie=Surface|Plástico (con brillo)=Plastic Shading|Mate=Diffuse Shading|Sin sombreado=No Shading|Dirección de la luz (°)=Light Direction (°)|Altura de la luz (°)=Light Height (°)|Luz ambiente (%)=Ambient Light (%)
 Separación=Spacing|Mayúsculas=Caps|Pinceles=Brushes|Aplicar=Apply|Pantalla=Screen|Impresión=Print|Web=Web|Vídeo=Film & Video|Móvil=Mobile|Arte y dibujo=Art & Illustration
+Reglas y cuadrículas=Rulers & Grids|Círculo=Circle|Círculos=Rings|Radios=Rays|Latín-1=Latin-1|Alt+clic: ocultar las demás=Alt+click: hide the others|Alt+clic: opciones=Alt+click: options|Editar el contenido de la máscara=Edit Mask Contents|Liberar la máscara=Release Mask|Nueva capa=New Layer
 `;
 
 const Lang = {
+  /* textos con «=» dentro, que no caben en el formato clave=valor del diccionario */
+  EXTRA: { 'Espacio (vacío = automático)': 'Spacing (empty = automatic)' },
   cur: (() => { try { const s = localStorage.getItem('vectora-lang'); if (s) return s; } catch (e) { /* sin almacenamiento */ } return (navigator.language || 'es').toLowerCase().startsWith('es') ? 'es' : 'en'; })(),
   dict: null,
   build() {
@@ -137,6 +140,7 @@ const Lang = {
   t(s) {
     if (this.cur === 'es' || !s) return s;
     const D = this.build(), raw = s, lead = s.match(/^\s*/)[0], trail = s.match(/\s*$/)[0]; s = s.trim();
+    if (Lang.EXTRA[s]) return lead + Lang.EXTRA[s] + trail;
     if (D.has(s)) return lead + D.get(s) + trail;
     let pre = ''; if (s.startsWith('✓ ')) { pre = '✓ '; s = s.slice(2); }
     let dots = ''; if (s.endsWith('…')) { dots = '…'; s = s.slice(0, -1); }
@@ -145,7 +149,7 @@ const Lang = {
     const m = s.match(/^(.+?) \(([^()]+)\)$/);
     if (m && D.has(m[1])) return lead + pre + D.get(m[1]) + ` (${D.has(m[2]) ? D.get(m[2]) : m[2].replace(/Mayús\+/g, 'Shift+').replace(/Supr/g, 'Del')})` + dots + trail;
     /* nombres por defecto de documentos y el modo de vista del título */
-    const r = raw.replace(/Sin título/g, 'Untitled').replace(/Vista previa/g, 'Preview');
+    const r = raw.replace(/Sin título/g, 'Untitled').replace(/Vista previa/g, 'Preview').replace(/^(\s*)Versión (\d)/, '$1Version $2');
     return r;
   },
   skip(n) {
