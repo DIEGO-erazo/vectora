@@ -26,9 +26,13 @@ Mejoras posteriores: el texto con formato fluye entre cuadros enlazados, la pers
 la malla de degradado usa líneas curvas suaves, el 3D tiene dirección de luz y tipos de superficie, y el editor
 de texto gira con la vista.
 
+**Vectora 1.3.1** resuelve lo que quedaba por comprobar del PDF vectorial: los filtros (sombra, desenfoque,
+resplandores, desvanecer, grano) y las máscaras de opacidad no salían, porque svg2pdf no los admite. Ahora esos
+objetos se incluyen como imagen a 300 ppp y el resto sigue vectorial; las mallas y los degradados ya salían bien.
+El detalle de esa versión está en [PLAN-MEJORA.md](PLAN-MEJORA.md).
+
 Pendiente para versiones futuras: separación de colores real en PDF (las tintas planas se exportan como RGB);
-comprobar cómo salen las máscaras, los filtros y las mallas en el PDF vectorial (la librería svg2pdf no admite todos los filtros SVG); firma de código de los instaladores y
-actualización automática en segundo plano.
+firma de código de los instaladores y actualización automática en segundo plano.
 
 ## 1. Dónde estamos
 

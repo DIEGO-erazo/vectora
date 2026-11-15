@@ -28,7 +28,7 @@ npm run web      # versión web en http://localhost:8080
 ## Antes de enviar una *pull request*
 
 1. `npm run check` sin errores.
-2. `tests.html` al 100 % (ábrelo con `npm run web`).
+2. `npm test` sin fallos (la primera vez: `npx playwright install chromium`). Si añades una función, añade su prueba en `scripts/e2e.js` o en `tests.html`.
 3. Prueba el cambio en el programa de escritorio (`npm start`).
 4. Describe en la *pull request* qué cambia y cómo probarlo.
 

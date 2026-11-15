@@ -56,6 +56,10 @@ Programa de escritorio para Windows, macOS y Linux, y también aplicación web i
   **cuadrícula de perspectiva**, **3D** (extruir y biselar, revolución), resplandores, desvanecer, grano y
   **Garabato**, rociador de símbolos, **formato por rangos en el texto** (una palabra en negrita o de otro color),
   paneles **Navegador**, **Información** y **Acciones**, **espacios de trabajo** con paneles flotantes y **Rotar vista**.
+- **Novedades de la 1.3.1:** el PDF vectorial conserva sombras, desenfoques, resplandores y máscaras de opacidad;
+  mover o seleccionar miles de objetos es unas diez veces más rápido; la barra de herramientas y los menús se
+  pueden usar con el teclado; abrir un SVG ajeno es más seguro; y la interfaz en inglés quedó completa.
+  Detalle en [CHANGELOG.md](CHANGELOG.md).
 - **Automatización:** **consola de scripts** en JavaScript con ejemplos; cada script se deshace de una vez.
 - **Imagen:** Calco de imagen (fotografía, colores, grises, blanco y negro, silueta).
 - **Historial** con nombre de cada paso, deshacer por documento y autoguardado de la sesión.
@@ -84,17 +88,28 @@ npm install          # dependencias (Electron y librerías PDF)
 npm start            # abre el programa de escritorio
 npm run web          # sirve la versión web en http://localhost:8080
 npm run check        # comprueba la sintaxis y las referencias
+npm test             # pruebas en un navegador real (la primera vez: npx playwright install chromium)
 npm run dist:win     # crea el instalador de Windows en dist/
 ```
 
-- Las pruebas de geometría están en `tests.html`: ábrelo en el navegador con `npm run web`.
+- `npm test` abre Vectora en Chromium y comprueba que nada se rompe:
+  - las 30 pruebas de geometría de `tests.html`;
+  - cada comando de menú con cinco selecciones distintas, y que se puede deshacer;
+  - las 59 herramientas, arrastrando y haciendo clic;
+  - guardar y volver a abrir, y el saneado de un SVG malicioso;
+  - el PDF vectorial comparado con el PNG;
+  - el rendimiento con 3.000 objetos, la interfaz en inglés y el uso con teclado.
+
+  `npm test -- menus` ejecuta solo un grupo. Con `VECTORA_CHANNEL=msedge` (o `chrome`) usa un navegador ya instalado.
+  GitHub Actions las ejecuta en cada cambio.
+- Las pruebas de geometría también se pueden ver en `tests.html`: ábrelo en el navegador con `npm run web`.
 - `npx electron scripts/smoke-electron.js archivo.svg` arranca el programa, abre el archivo y comprueba la exportación e importación de PDF.
 
 La interfaz es HTML, SVG y JavaScript sin dependencias ni compilación: `index.html` funciona tal cual en el navegador.
 
 ### Publicar una versión
 
-1. Cambia `version` en `package.json` y en `js/app.js` (`APP_INFO`).
+1. Cambia `version` en `package.json`, en `js/app.js` (`APP_INFO`) y en `sw.js` (`VERSION`), y anota los cambios en `CHANGELOG.md`.
 2. Crea y sube la etiqueta:
    ```bash
    git tag v1.0.0
@@ -123,7 +138,9 @@ La versión web se publica sola en **GitHub Pages** con cada cambio en `main`. A
 | `js/symbols.js`, `js/layers2.js`, `js/objectops.js`, `js/pathfinder2.js`, `js/taskbar.js` | símbolos y motivos, capas, alinear y seleccionar, buscatrazos, barra de tareas |
 | `js/quick.js`, `js/masks.js`, `js/shaper.js`, `js/fxfilters.js`, `js/three.js`, `js/mesh.js`, `js/perspective.js`, `js/richtext.js` | funciones de la 1.3: repetir, máscaras, shaper y licuar, filtros, 3D, malla, perspectiva y texto con formato |
 | `js/prefs.js`, `js/appx.js`, `js/i18n.js`, `js/actions2.js`, `js/workspace.js` | preferencias y temas, atajos, scripts, actualizaciones e idioma |
+| `js/a11y.js` | accesibilidad: teclado en herramientas y menús, nombres para lectores de pantalla |
 | `js/app.js`, `sw.js`, `manifest.webmanifest` | integración como aplicación (escritorio y PWA) |
+| `scripts/check.js`, `scripts/e2e.js`, `tests.html` | comprobación de sintaxis y pruebas automáticas |
 | `electron/` | programa de escritorio |
 
 ## Contribuir
