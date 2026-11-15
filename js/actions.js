@@ -107,7 +107,7 @@ const Actions = {
   transform(M) {
     if (!App.selection.length) return;
     App.lastTransform = { matrix: M, duplicate: false };
-    App.selection.forEach(e => { Geo.applyDoc(e, M); normalizeTransform(e); }); History.commit(); Selection.changed();
+    Geo.applyDocAll(App.selection, M); App.selection.forEach(normalizeTransform); History.commit(); Selection.changed();
   },
   center() { const b = Selection.box(); return b && { x: b.x + b.width / 2, y: b.y + b.height / 2 }; },
   reflect(axis) { const c = this.center(); if (c) this.transform(Geo.scaleAbout(axis === 'h' ? -1 : 1, axis === 'v' ? -1 : 1, c.x, c.y)); },

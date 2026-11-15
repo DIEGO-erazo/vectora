@@ -54,13 +54,29 @@ const Selection = {
     }
   },
 
+  /* Con selecciones muy grandes, un contorno por objeto son miles de nodos en cada redibujado.
+     Se dibuja el rectángulo de cada objeto, todos en un único trazado. */
+  MANY: 400,
+  outlineMany(g, sel) {
+    const ly = Layers.layerOf(sel[0]), c = (ly && ly.getAttribute('data-color')) || '#4f8cff', r = n => Math.round(n * 10) / 10;
+    let d = '';
+    for (const el of sel) {
+      let b, m; try { b = el.getBBox(); m = el.getCTM(); } catch (e) { continue; }
+      if (!m || !(b.width || b.height)) continue;
+      const q = (x, y) => `${r(m.a * x + m.c * y + m.e)} ${r(m.b * x + m.d * y + m.f)}`;
+      d += `M${q(b.x, b.y)}L${q(b.x + b.width, b.y)}L${q(b.x + b.width, b.y + b.height)}L${q(b.x, b.y + b.height)}Z`;
+    }
+    if (d) svgEl('path', { d, fill: 'none', stroke: c, 'stroke-width': 1 }, g);
+  },
+
   draw() {
     const g = App.els.overlay; g.innerHTML = '';
     const sel = App.selection;
     if (typeof Guides !== 'undefined') Guides.draw(g);
     if (typeof Artboards !== 'undefined') Artboards.drawLabels(g);
     const showBox = sel.length && App.toolName !== 'direct' && App.toolName !== 'pen';
-    for (const el of sel) {
+    if (sel.length > this.MANY) this.outlineMany(g, sel);
+    else for (const el of sel) {
       const ly = Layers.layerOf(el); const c = (ly && ly.getAttribute('data-color')) || '#4f8cff';
       this.outline(g, el, c);
     }
@@ -146,7 +162,7 @@ const Transformer = {
       M = a.fr.F.multiply(Geo.scaleAbout(sx, sy, ax, ay)).multiply(a.fr.Fi);
       App.measure = `An: ${Units.fmt(b.width * Math.abs(sx))}  Al: ${Units.fmt(b.height * Math.abs(sy))} ${Units.u}`;
     }
-    a.els.forEach(e => Geo.applyDoc(e, M));
+    Geo.applyDocAll(a.els, M);
     a.M = M;
     Selection.draw(); App.emit('transform');
   },

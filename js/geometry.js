@@ -23,6 +23,13 @@ const Geo = {
     const L = this.local(el);
     this.setMatrix(el, P.inverse().multiply(M).multiply(P).multiply(L));
   },
+  /* lo mismo para muchos elementos: primero se leen las matrices de los padres y después se escribe,
+     para que el navegador no recalcule el dibujo entre un elemento y el siguiente */
+  applyDocAll(els, M) {
+    const P = new Map();
+    for (const el of els) if (!P.has(el.parentNode)) P.set(el.parentNode, this.toDoc(el.parentNode));
+    for (const el of els) { const p = P.get(el.parentNode); this.setMatrix(el, p.inverse().multiply(M).multiply(p).multiply(this.local(el))); }
+  },
   pt(m, x, y) { const p = new DOMPoint(x, y).matrixTransform(m); return { x: p.x, y: p.y }; },
   bbox(el) {
     let b; try { b = el.getBBox(); } catch (e) { return null; }
@@ -41,7 +48,21 @@ const Geo = {
     const x2 = Math.max(...boxes.map(b => b.x + b.width)), y2 = Math.max(...boxes.map(b => b.y + b.height));
     return { x, y, width: x2 - x, height: y2 - y };
   },
-  selBox(els) { return this.union(els.map(e => this.bbox(e))); },
+  /* Caja de una selección. Con muchos objetos se recuerda mientras el documento no cambie: una sola
+     acción la pide varias veces (redibujado, panel Transformar, barra de control…). takeRecords()
+     avisa en el acto de cualquier cambio en el dibujo, así que nunca se devuelve una caja vieja. */
+  selBox(els) {
+    if (els.length < 60 || !App.els.content || typeof MutationObserver === 'undefined') return this.union(els.map(e => this.bbox(e)));
+    const C = this._boxCache || (this._boxCache = { els: [], box: null, obs: null, ok: false });
+    if (!C.obs) {
+      C.obs = new MutationObserver(() => { C.ok = false; });
+      C.obs.observe(App.els.content, { attributes: true, childList: true, subtree: true, characterData: true });
+    }
+    if (C.obs.takeRecords().length) C.ok = false;
+    if (C.ok && C.els.length === els.length && els.every((e, i) => e === C.els[i])) return C.box && { ...C.box };
+    C.els = els.slice(); C.box = this.union(els.map(e => this.bbox(e))); C.ok = true;
+    return C.box && { ...C.box };
+  },
   angle(el) { const m = this.toDoc(el); return Math.atan2(m.b, m.a) * 180 / Math.PI; },
   rotateAbout(deg, cx, cy) { return new DOMMatrix().translate(cx, cy).rotate(deg).translate(-cx, -cy); },
   scaleAbout(sx, sy, cx, cy) { return new DOMMatrix().translate(cx, cy).scale(sx, sy).translate(-cx, -cy); },
