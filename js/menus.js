@@ -17,13 +17,27 @@ const IO = {
     App.emit('layers'); Panels.refresh(); Rulers.draw(); Docs.render(); View.apply();
   },
   count: 0,
+  /* Limpia un SVG ajeno antes de meterlo en el documento:
+     · fuera el código (script, on*, javascript:) y lo que puede ejecutarlo o incrustar otra página;
+     · fuera las animaciones SMIL: pueden reescribir un enlace o un on* después del saneado;
+     · los href solo pueden apuntar dentro del archivo (#id) o a una imagen incrustada (data:image/…);
+       los enlaces <a> además admiten http(s). Así abrir un archivo no descarga nada de internet. */
   sanitize(root) {
-    root.querySelectorAll('script,foreignObject,iframe').forEach(e => e.remove());
+    root.querySelectorAll('script,foreignObject,iframe,object,embed,animate,set,animateTransform,animateMotion,discard,handler,listener').forEach(e => e.remove());
+    const compact = v => v.replace(/[\x00-\x20\x7f-\x9f]/g, ''); /* espacios y caracteres de control */
     for (const e of [root, ...root.querySelectorAll('*')]) for (const a of [...e.attributes]) {
-      if (/^on/i.test(a.name)) e.removeAttribute(a.name);
-      if (/href$/i.test(a.name) && /^\s*javascript:/i.test(a.value)) e.removeAttribute(a.name);
+      const name = a.name.toLowerCase(), v = compact(a.value);
+      if (/^on/.test(name)) { e.removeAttribute(a.name); continue; }
+      if (/href$/.test(name) || name === 'src') {
+        const ok = /^#/.test(v) || /^data:image\/(png|jpe?g|gif|webp|bmp|avif|svg\+xml)[;,]/i.test(v) || (e.localName === 'a' && /^https?:\/\//i.test(v));
+        if (!ok) e.removeAttribute(a.name);
+      }
     }
     this.inlineCSS(root);
+    /* url(...) externas en atributos de presentación (relleno, filtro, máscara…): solo se admiten #id */
+    for (const e of [root, ...root.querySelectorAll('*')]) for (const a of [...e.attributes]) {
+      if (/url\(/i.test(a.value) && !/href$/i.test(a.name) && [...a.value.matchAll(/url\(\s*['"]?([^'")]*)/gi)].some(m => !compact(m[1]).startsWith('#'))) e.removeAttribute(a.name);
+    }
   },
   /* Convierte las hojas <style> y los atributos style="" en atributos de presentación,
      para que el CSS importado no afecte a la interfaz y los colores sean editables. */
