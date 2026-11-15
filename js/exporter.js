@@ -135,12 +135,47 @@ const Export = {
       for (const [i, { svg, box }] of pages.entries()) {
         if (i) pdf.addPage([box.width, box.height], o(box));
         holder.appendChild(svg);
+        await this.flattenEffects(svg);
         await pdf.svg(svg, { x: 0, y: 0, width: box.width, height: box.height });
         svg.remove();
       }
     } finally { holder.remove(); }
     pdf.setProperties({ title: App.doc.title, creator: 'Vectora' });
     return pdf.output('blob');
+  },
+  /* La librería del PDF vectorial no dibuja filtros (sombra, desenfoque, resplandor, desvanecer, grano)
+     ni máscaras de opacidad: sin esto esos objetos salían lisos. Cada objeto con filtro o máscara se
+     sustituye por su imagen a 300 ppp, en su sitio y en su orden; todo lo demás sigue siendo vectorial.
+     El svg tiene que estar en el documento (se miden sus cajas). Devuelve cuántos objetos convirtió. */
+  PDF_PPI: 300,
+  async flattenEffects(svg) {
+    const els = [...svg.querySelectorAll('[filter],[mask]')].filter(e => !e.closest('defs,clipPath,mask,pattern,symbol,marker') && !e.parentElement.closest('[filter],[mask]'));
+    const root = els.length && svg.getScreenCTM(); if (!root) return 0;
+    const Ri = root.inverse(), ser = new XMLSerializer(), vb = svg.viewBox.baseVal, mat = m => `matrix(${[m.a, m.b, m.c, m.d, m.e, m.f].map(v => round(v, 6)).join(' ')})`;
+    const defs = [...svg.querySelectorAll(':scope > defs')].map(d => ser.serializeToString(d)).join('');
+    let done = 0;
+    for (const el of els) {
+      let b; try { b = el.getBBox(); } catch (e) { continue; }
+      const M = Ri.multiply(el.getScreenCTM()), P = Ri.multiply(el.parentNode.getScreenCTM());
+      const ps = [[b.x, b.y], [b.x + b.width, b.y], [b.x, b.y + b.height], [b.x + b.width, b.y + b.height]].map(([x, y]) => new DOMPoint(x, y).matrixTransform(M));
+      let x0 = Math.min(...ps.map(p => p.x)), y0 = Math.min(...ps.map(p => p.y)), x1 = Math.max(...ps.map(p => p.x)), y1 = Math.max(...ps.map(p => p.y));
+      /* la zona de un filtro llega hasta un 50 % más allá de la caja del objeto */
+      const px = (x1 - x0) * 0.5 + 4, py = (y1 - y0) * 0.5 + 4; x0 -= px; y0 -= py; x1 += px; y1 += py;
+      if (vb && vb.width) { x0 = Math.max(x0, vb.x); y0 = Math.max(y0, vb.y); x1 = Math.min(x1, vb.x + vb.width); y1 = Math.min(y1, vb.y + vb.height); }
+      const w = x1 - x0, h = y1 - y0; if (!(w > 0 && h > 0)) continue;
+      const scale = Math.min(this.PDF_PPI / 72, 4096 / Math.max(w, h));
+      const text = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="${x0} ${y0} ${w} ${h}" width="${w}" height="${h}">${defs}<g transform="${mat(P)}">${ser.serializeToString(el)}</g></svg>`;
+      let url;
+      try {
+        const png = await IO.rasterize(text, w, h, scale, null, 'image/png', 1);
+        url = await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(png); });
+      } catch (e) { continue; } /* si no se puede, el objeto queda como estaba */
+      const img = svgEl('image', { x: round(x0, 3), y: round(y0, 3), width: round(w, 3), height: round(h, 3), preserveAspectRatio: 'none' });
+      img.setAttribute('href', url);
+      if (!P.isIdentity) img.setAttribute('transform', mat(P.inverse()));
+      el.replaceWith(img); done++;
+    }
+    return done;
   },
   busy(msg) { $('sbHint').textContent = msg || ''; document.body.style.cursor = msg ? 'progress' : ''; },
 
