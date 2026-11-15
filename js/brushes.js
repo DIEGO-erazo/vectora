@@ -284,7 +284,7 @@ App.tools.width = {
     let best = null;
     for (const el of this.candidates()) {
       const m = el.getCTM(); if (!m) continue;
-      const subs = el.tagName === 'path' ? PathData.parse(el.getAttribute('data-src') ?? el.getAttribute('d') ?? '') : PathData.parse(Geo.fromShape(el) || '');
+      const subs = el.tagName === 'path' ? PathData.parse(el.getAttribute('data-src') ?? el.getAttribute('d') ?? '') : PathData.parse(PathData.fromShape(el) || '');
       const sc = Math.sqrt(Math.abs(m.a * m.d - m.b * m.c)) || 1, W = LiveFX.baseWidth(el);
       subs.forEach((s, si) => {
         const S = arcSamples(s, 2 / sc);
